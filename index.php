@@ -2,111 +2,76 @@
 <html lang="en">
 
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartStock | Enterprise Logistics Sign In</title>
-
-    <!-- External Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
-        rel="stylesheet">
-
-    <!-- Shared CSS Link -->
-    <link rel="stylesheet" href="resources/styles.css">
+    <title>SmartStock | Login</title>
+    <link rel="stylesheet" href="src/output.css">
 </head>
 
-<body>
-    <!-- Background Glow Decoration -->
-    <!-- <div class="bg-decoration">
-        <div class="glow-1"></div>
-        <div class="glow-2"></div>
-    </div> -->
 
-    <!-- Main Container -->
-    <main class="auth-container">
-        <!-- Brand Header with Left-Aligned Logo -->
-        <?php require_once "views/partials/header.php" ?>
+<body class="bg-gray-50 flex flex-col min-h-screen">
+
+    <div class="w-full max-w-md mx-auto px-4 pt-12 flex-grow">
+
+        <div class="mb-6 text-center">
+            <h1 class="text-4xl font-bold "> SmartStock </h1>
+            <p class="text-gray-500 text-sm mt-1"> Enterprise Inventory Management</p>
+        </div>
+
+        <div class="p-8 shadow-lg bg-white rounded-xl border border-gray-100">
+            <p class="font-semibold text-xl"> Welcome Back</p>
+            <p class="text-gray-600 text-sm mb-4"> Please enter your details to access your dashboard. </p>
+
+            <form id="loginForm" method="POST">
+                <div>
+                    <div class="mb-4">
+                        <label class="text-sm font-medium mb-1 block">Email Address</label>
+                        <div class="relative w-full text-gray-400 focus-within:text-black">
+                            <div class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                <svg xmlns="http://w3.org" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                                    stroke="currentColor" class="w-5 h-5">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                                </svg>
+                            </div>
+
+                            <input type="email" placeholder="name@gmail.com"
+                                class="border border-gray-300 rounded-lg pl-10 pr-4 py-2 w-full focus:outline-none focus:border-black focus:text-black">
+                        </div>
+                    </div>
 
 
-        <!-- Auth Card -->
-        <section class="glass-card">
-            <header class="card-header">
-                <h2>Welcome Back</h2>
-                <p>Please enter your details to access your dashboard.</p>
-            </header>
+                    <div class="mb-4">
+                        <label class="text-sm font-medium mb-1 block">Password</label>
+                        <div class="relative w-full text-gray-400 focus-within:text-black">
+                            <div class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                <svg xmlns="http://w3.org" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                                    stroke="currentColor" class="w-5 h-5">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                                </svg>
+                            </div>
 
-            <form id="loginForm" class="auth-form" method="POST">
-                <!-- Email Field -->
-                <div class="form-group">
-                    <label for="email">Email Address</label>
-                    <div class="input-wrapper">
-                        <span class="material-symbols-outlined input-icon">mail</span>
-                        <input class="input-minimal" id="email" name="email" placeholder="name@company.com" required
-                            type="email" autocomplete="email">
+                            <input id="passwordInput" type="password" placeholder="••••••••"
+                                class="border border-gray-300 rounded-lg pl-10 pr-16 py-2 w-full focus:outline-none focus:border-black focus:text-black">
+                        </div>
                     </div>
                 </div>
 
-                <!-- Password Field -->
-                <div class="form-group">
-                    <div class="form-label-row">
-                        <label for="password">Password</label>
-                        <a class="forgot-link" href="#">Forgot Password?</a>
-                    </div>
-                    <div class="input-wrapper password-wrapper">
-                        <span class="material-symbols-outlined input-icon">lock</span>
-                        <input class="input-minimal" id="password" name="password" placeholder="••••••••" required
-                            type="password" autocomplete="current-password">
-                        <button class="toggle-password-btn" id="togglePassword" type="button"
-                            aria-label="Toggle password visibility">
-                            <span class="material-symbols-outlined">visibility</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Remember Me -->
-                <div class="remember-row">
-                    <input id="remember" name="remember" type="checkbox">
-                    <label for="remember">Remember this device for 30 days</label>
-                </div>
-
-                <!-- Submit Button -->
-                <button class="btn-submit" type="submit">
-                    <span>Sign In</span>
-                    <span class="material-symbols-outlined btn-arrow">arrow_forward</span>
+                <button type="submit"
+                    class="mt-2 px-2 py-3 w-full bg-black text-white cursor-pointer rounded-lg hover:bg-gray-900 ">
+                    Sign In
                 </button>
             </form>
+        </div>
 
-            <div class="card-footer-divider">
-                <p class="alt-action-text" style="margin-top: 0;">
-                    Don't have an account?
-                    <a class="alt-action-link" href="register.html">Register Now</a>
-                </p>
-            </div>
-        </section>
+        <p class="text-center text-sm text-gray-500 mt-6 mb-4"> New in our platform? <a href="/"
+                class=" font-semibold hover:underline"> Create an account </a></p>
 
-        <!-- Footer -->
-        <?php require_once "views/partials/footer.php" ?>
-    </main>
+    </div>
 
+    <?php require_once('resources/views/partials/footer.php') ?>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const toggleBtn = document.getElementById('togglePassword');
-            const passwordInput = document.getElementById('password');
-
-            // Password visibility toggle
-            toggleBtn.addEventListener('click', () => {
-                const isPassword = passwordInput.getAttribute('type') === 'password';
-                passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
-
-                const icon = toggleBtn.querySelector('.material-symbols-outlined');
-                icon.textContent = isPassword ? 'visibility_off' : 'visibility';
-            });
-        });
-    </script>
-
-    <script type="module" src="resources/js/auth.js"></script>
 </body>
 
 </html>

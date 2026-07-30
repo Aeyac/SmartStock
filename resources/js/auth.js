@@ -1,7 +1,6 @@
 import { apiRequest } from "../fetchApi.js";
 console.log("loaded");
 
-/* ---------------- Auth-specific functions ---------------- */
 
 async function registerUser(name, email, password) {
   const data = { name: name, email: email, password: password };
@@ -17,9 +16,7 @@ async function logoutUser() {
   return await apiRequest("auth", "logout", "POST", null);
 }
 
-/* ---------------- Connect functions to HTML forms ---------------- */
 
-// Helper to disable button & show spinner
 function setLoadingState(btn, text = "Processing...") {
   const originalHTML = btn.innerHTML;
   btn.innerHTML = `<span class="material-symbols-outlined animate-spin">progress_activity</span> ${text}`;
@@ -28,7 +25,6 @@ function setLoadingState(btn, text = "Processing...") {
   return originalHTML;
 }
 
-// Helper to restore original button state
 function restoreButtonState(btn, originalHTML) {
   btn.innerHTML = originalHTML;
   btn.style.pointerEvents = "auto";
@@ -36,7 +32,8 @@ function restoreButtonState(btn, originalHTML) {
   btn.classList.remove("success");
 }
 
-/* --- Registration Form Handler --- */
+
+
 const registerForm =
   document.getElementById("registerForm") || document.querySelector("form");
 
@@ -61,9 +58,8 @@ if (registerForm && document.getElementById("name")) {
 
       registerForm.reset();
 
-      // Optional: Redirect to login page after 1.5s
       setTimeout(() => {
-        window.location.href = "/SmartStock/index.php";
+        window.location.href = "/smartstock/index.php";
       }, 1500);
     } catch (err) {
       alert(err.message || "Registration failed. Please try again.");
@@ -76,7 +72,6 @@ const loginForm =
   document.getElementById("loginForm") || document.querySelector("form");
 
 if (loginForm && !document.getElementById("name")) {
-
   loginForm.addEventListener("submit", async function (e) {
     e.preventDefault();
 
@@ -101,7 +96,7 @@ if (loginForm && !document.getElementById("name")) {
   });
 }
 
-/* --- Logout Handler --- */
+
 const logoutBtn = document.getElementById("logoutBtn");
 if (logoutBtn) {
   logoutBtn.addEventListener("click", async function () {
