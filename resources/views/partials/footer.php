@@ -1,19 +1,23 @@
-<footer class="mt-auto w-full py-6 bg-white border-t border-gray-200/80">
-    <div class="max-w-4xl mx-auto px-4 flex flex-col items-center gap-3">
+<footer class="w-full border-t border-slate-200 bg-white">
+    <div class="mx-auto flex max-w-7xl flex-col items-center gap-3 px-6 py-6">
 
-        <div class="flex justify-center items-center gap-6">
-            <a href="#"
-                class="text-xs text-gray-500 hover:text-blue-600 transition-colors duration-150 font-medium">Privacy
-                Policy</a>
-            <a href="#"
-                class="text-xs text-gray-500 hover:text-blue-600 transition-colors duration-150 font-medium">Terms of
-                Service</a>
-            <a href="#"
-                class="text-xs text-gray-500 hover:text-blue-600 transition-colors duration-150 font-medium">Help
-                Center</a>
+        <div class="flex flex-wrap items-center justify-center gap-6">
+
+            <a href="#" class="text-xs font-medium text-slate-500 transition hover:text-indigo-600">
+                Privacy Policy
+            </a>
+
+            <a href="#" class="text-xs font-medium text-slate-500 transition hover:text-indigo-600">
+                Terms of Service
+            </a>
+
+            <a href="#" class="text-xs font-medium text-slate-500 transition hover:text-indigo-600">
+                Help Center
+            </a>
+
         </div>
 
-        <p class="text-center text-xs text-gray-400 tracking-wide">
+        <p class="text-center text-xs text-slate-400">
             &copy; 2026 SmartStock Enterprise Logistics. All rights reserved.
         </p>
 
