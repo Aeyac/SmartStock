@@ -88,7 +88,7 @@ switch ($method) {
             echo json_encode([
                 'status' => 'success',
                 'message' => 'Logged in successfully.',
-                'user' => ['id' => $user['id'], 'name' => $user['name'], 'email' => $user['email']]
+                // 'user' => ['id' => $user['id'], 'name' => $user['name'], 'email' => $user['email']]
             ]);
             exit;
         }

@@ -1,4 +1,5 @@
 import { apiRequest } from "../fetchApi.js";
+console.log("loaded");
 const BASE_URL = "/smart_stock/endpoints/Auth.php";
 
 export function registerUser(name, email, password) {
@@ -19,56 +20,98 @@ export function logoutUser() {
   });
 }
 
-// const registerForm =
-//   document.getElementById("registerForm") || document.querySelector("form");
+const registerForm =
+  document.getElementById("registerForm") || document.querySelector("form");
 
-// if (registerForm && document.getElementById("name")) {
-//   registerForm.addEventListener("submit", async function (e) {
-//     e.preventDefault();
+if (registerForm && document.getElementById("name")) {
+  registerForm.addEventListener("submit", async function (e) {
+    e.preventDefault();
 
-//     const name = document.getElementById("name").value;
-//     const email = document.getElementById("email").value;
-//     const password = document.getElementById("password").value;
+    const btn = document.getElementById("registerBtn");
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML =
+      '<span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>';
 
-//     try {
-//       await registerUser(name, email, password);
+    const name = document.getElementById("name").value;
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
 
-//       registerForm.reset();
-//     } catch (err) {
-//       alert(err.message || "Registration failed. Please try again.");
-//     }
-//   });
-// }
+    try {
+      const result = await registerUser(name, email, password);
+      console.log(result);
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }, 1000);
 
-// const loginForm =
-//   document.getElementById("loginForm") || document.querySelector("form");
+      registerForm.reset();
+    } catch (err) {
+      btn.innerHTML = originalText;
+      btn.disabled = false;
 
-// if (loginForm && !document.getElementById("name")) {
-//   loginForm.addEventListener("submit", async function (e) {
-//     e.preventDefault();
+      alert(err.message || "Registration failed. Please try again.");
+    }
+  });
+}
 
-//     const email = document.getElementById("email").value;
-//     const password = document.getElementById("password").value;
+const loginForm =
+  document.getElementById("loginForm") || document.querySelector("form");
 
-//     try {
-//       const result = await loginUser(email, password);
-//       console.log(result);
+if (loginForm && !document.getElementById("name")) {
+  loginForm.addEventListener("submit", async function (e) {
+    e.preventDefault();
 
-//       console.log("logged in");
-//     } catch (err) {
-//       alert(err.message || "Login failed. Check your credentials.");
-//     }
-//   });
-// }
+    const btn = document.getElementById("signInBtn");
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML =
+      '<span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>';
 
-// const logoutBtn = document.getElementById("logoutBtn");
-// if (logoutBtn) {
-//   logoutBtn.addEventListener("click", async function () {
-//     try {
-//       await logoutUser();
-//       window.location.href = "index.php";
-//     } catch (err) {
-//       alert(err.message || "Logout failed.");
-//     }
-//   });
-// }
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    try {
+      const result = await loginUser(email, password);
+
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }, 1000);
+
+      console.log(result);
+    } catch (err) {
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+
+      alert(err.message || "Login failed. Check your credentials.");
+    }
+  });
+}
+
+const logoutBtn = document.getElementById("logoutBtn");
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", async function () {
+    try {
+      await logoutUser();
+      window.location.href = "index.php";
+    } catch (err) {
+      alert(err.message || "Logout failed.");
+    }
+  });
+}
+
+
+const passwordBtn = document.getElementById("passwordBtn");
+passwordBtn.addEventListener("click", () => {
+  const input = document.getElementById("password");
+  const icon = document.getElementById("passwordIcon");
+
+  if (input.type === "password") {
+    input.type = "text";
+    icon.textContent = "visibility_off";
+  } else {
+    input.type = "password";
+    icon.textContent = "visibility";
+  }
+});

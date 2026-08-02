@@ -7,8 +7,11 @@ export async function apiRequest(url, options = {}) {
     ...options,
   });
   const result = await response.json();
-  if (!response.ok) {
-    throw new Error(result.message || "Request failed.");
-  }
+  // if (!response.ok) {
+  //   throw new Error(result.message || "Request failed.");
+  // }
   return result;
 }
+
+
+
