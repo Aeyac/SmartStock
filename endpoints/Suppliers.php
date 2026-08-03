@@ -5,16 +5,17 @@ require_once "../db.php";
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 
-if (!isset($_SESSION['user_id'])) {
-    http_response_code(401);
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Not authenticated.'
-    ]);
-    exit;
-}
+// if (!isset($_SESSION['user_id'])) {
+//     http_response_code(401);
+//     echo json_encode([
+//         'status' => 'error',
+//         'message' => 'Not authenticated.'
+//     ]);
+//     exit;
+// }
 
 $userId = $_SESSION['user_id'];
+// $userId = 1;
 $mydb = new myDB();
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -58,6 +59,8 @@ switch ($method) {
             $errors['contact_number'] = 'Contact number is required.';
         } elseif (strlen($contact) > 15) {
             $errors['contact_number'] = 'Maximum of 15 digits.';
+        } elseif (!preg_match('/^[0-9]+$/', $contact)) {
+            $errors['contact_number'] = 'Contact number must contain digits only.';
         }
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -75,7 +78,7 @@ switch ($method) {
         }
 
         if (!empty($errors)) {
-            http_response_code(422);
+            // http_response_code(422);
             echo json_encode(['status' => 'error', 'errors' => $errors]);
             exit;
         }

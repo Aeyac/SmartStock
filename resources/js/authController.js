@@ -20,6 +20,7 @@ export function logoutUser() {
   });
 }
 
+// --- REGISTER FORM HANDLING ---
 const registerForm =
   document.getElementById("registerForm") || document.querySelector("form");
 
@@ -28,10 +29,12 @@ if (registerForm && document.getElementById("name")) {
     e.preventDefault();
 
     const btn = document.getElementById("registerBtn");
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML =
-      '<span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>';
+    const originalText = btn ? btn.innerHTML : "Register";
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML =
+        '<span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>';
+    }
 
     const name = document.getElementById("name").value;
     const email = document.getElementById("email").value;
@@ -41,20 +44,24 @@ if (registerForm && document.getElementById("name")) {
       const result = await registerUser(name, email, password);
       console.log(result);
       setTimeout(() => {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
+        if (btn) {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+        }
       }, 1000);
 
       registerForm.reset();
     } catch (err) {
-      btn.innerHTML = originalText;
-      btn.disabled = false;
-
+      if (btn) {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
       alert(err.message || "Registration failed. Please try again.");
     }
   });
 }
 
+// --- LOGIN FORM HANDLING ---
 const loginForm =
   document.getElementById("loginForm") || document.querySelector("form");
 
@@ -63,32 +70,32 @@ if (loginForm && !document.getElementById("name")) {
     e.preventDefault();
 
     const btn = document.getElementById("signInBtn");
-    const originalText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML =
-      '<span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>';
+    const originalText = btn ? btn.innerHTML : "Sign in";
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML =
+        '<span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>';
+    }
 
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
 
     try {
       const result = await loginUser(email, password);
+      console.log("Login successful:", result);
 
-      setTimeout(() => {
+      window.location.replace("./resources/views/suppliers.php");
+    } catch (err) {
+      if (btn) {
         btn.innerHTML = originalText;
         btn.disabled = false;
-      }, 1000);
-
-      console.log(result);
-    } catch (err) {
-      btn.innerHTML = originalText;
-      btn.disabled = false;
-
+      }
       alert(err.message || "Login failed. Check your credentials.");
     }
   });
 }
 
+// --- LOGOUT HANDLING ---
 const logoutBtn = document.getElementById("logoutBtn");
 if (logoutBtn) {
   logoutBtn.addEventListener("click", async function () {
@@ -101,17 +108,21 @@ if (logoutBtn) {
   });
 }
 
-
+// --- PASSWORD VISIBILITY TOGGLE (Guarded against Null crashes) ---
 const passwordBtn = document.getElementById("passwordBtn");
-passwordBtn.addEventListener("click", () => {
-  const input = document.getElementById("password");
-  const icon = document.getElementById("passwordIcon");
+if (passwordBtn) {
+  passwordBtn.addEventListener("click", () => {
+    const input = document.getElementById("password");
+    const icon = document.getElementById("passwordIcon");
 
-  if (input.type === "password") {
-    input.type = "text";
-    icon.textContent = "visibility_off";
-  } else {
-    input.type = "password";
-    icon.textContent = "visibility";
-  }
-});
+    if (input && icon) {
+      if (input.type === "password") {
+        input.type = "text";
+        icon.textContent = "visibility_off";
+      } else {
+        input.type = "password";
+        icon.textContent = "visibility";
+      }
+    }
+  });
+}
