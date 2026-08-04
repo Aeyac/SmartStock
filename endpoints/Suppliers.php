@@ -49,6 +49,7 @@ switch ($method) {
         $name = trim($data['name'] ?? '');
         $contact = trim($data['contact_number'] ?? '');
         $email = trim($data['email'] ?? '');
+        $status = trim($data['status'] ?? 1);
 
         $errors = [];
 
@@ -87,7 +88,8 @@ switch ($method) {
             'user_id' => $userId,
             'name' => $name,
             'contact_number' => $contact,
-            'email' => $email
+            'email' => $email,
+            'active' => $status
         ]);
 
         http_response_code(201);
@@ -113,6 +115,8 @@ switch ($method) {
         $name = trim($data['name'] ?? '');
         $contact = trim($data['contact_number'] ?? '');
         $email = trim($data['email'] ?? '');
+        $status = trim($data['status'] ?? 1);
+
 
         $mydb->select('suppliers', 'id', [
             'id' => $id,
@@ -180,7 +184,8 @@ switch ($method) {
             [
                 'name' => $name,
                 'contact_number' => $contact,
-                'email' => $email
+                'email' => $email,
+                'active' => $status
             ],
 
             [

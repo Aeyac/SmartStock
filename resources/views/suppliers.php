@@ -96,21 +96,31 @@ session_start()
                         <thead class="sticky top-0 bg-gray-50 z-10">
                             <tr
                                 class="bg-gray-50 border-b border-gray-200 text-[11px] font-bold tracking-wider text-gray-500 uppercase select-none">
-                                <th class="py-3 px-4 sm:px-6 cursor-pointer hover:text-gray-800 transition">
+
+                                <!-- Column 1 Header -->
+                                <th class="py-3.5 px-4 sm:px-6 text-left cursor-pointer hover:text-gray-800 transition">
                                     <div class="flex items-center space-x-1">
                                         <span>SUPPLIER NAME</span>
                                         <i data-lucide="arrow-up-down" class="w-3 h-3 text-gray-400"></i>
                                     </div>
                                 </th>
-                                <th class="py-3 px-4 sm:px-6">CONTACT NUMBER</th>
-                                <th class="py-3 px-4 sm:px-6">EMAIL ADDRESS</th>
-                                <th class="py-3 px-4 sm:px-6 cursor-pointer hover:text-gray-800 transition">
+
+                                <!-- Column 2 Header -->
+                                <th class="py-3.5 px-4 sm:px-6 text-left">CONTACT NUMBER</th>
+
+                                <!-- Column 3 Header -->
+                                <th class="py-3.5 px-4 sm:px-6 text-left">EMAIL ADDRESS</th>
+
+                                <!-- Column 4 Header -->
+                                <th class="py-3.5 px-4 sm:px-6 text-left cursor-pointer hover:text-gray-800 transition">
                                     <div class="flex items-center space-x-1">
                                         <span>STATUS</span>
                                         <i data-lucide="arrow-up-down" class="w-3 h-3 text-gray-400"></i>
                                     </div>
                                 </th>
-                                <th class="py-3 px-4 sm:px-6 text-right">ACTIONS</th>
+
+                                <!-- Column 5 Header -->
+                                <th class="py-3.5 px-4 sm:px-6 text-right">ACTIONS</th>
                             </tr>
                         </thead>
                         <tbody id="suppliersTableBody" class="divide-y divide-gray-100 text-xs sm:text-sm">
@@ -149,7 +159,7 @@ session_start()
     </div>
 
     <script type="module" src="../js/suppliersController.js"></script>
-    
+
 
 </body>
 

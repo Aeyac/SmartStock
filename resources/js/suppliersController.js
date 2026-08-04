@@ -7,75 +7,6 @@ import {
 import { openModal, closeModal } from "./modalController.js";
 
 console.log("loaded");
-
-// ======================
-// Add Supplier Modal
-// ======================
-const addBtn = document.getElementById("addBtn");
-if (addBtn) {
-  addBtn.addEventListener("click", () => {
-    openSupplierModal({ title: "Add Supplier" });
-  });
-}
-
-// Helper function to build Add/Edit Modal dynamically
-function openSupplierModal({ title, supplier = null }) {
-  openModal({
-    titleText: title,
-
-    bodyHTML: `
-      <div class="flex flex-col gap-4">
-        <input
-          id="supplierName"
-          class="w-full rounded border p-2"
-          placeholder="Supplier Name"
-          value="${supplier ? supplier.name : ""}"
-        >
-
-        <input
-          id="supplierContact"
-          class="w-full rounded border p-2"
-          placeholder="Contact Number"
-          value="${supplier ? supplier.contact_number : ""}"
-        >
-
-        <input
-          id="supplierEmail"
-          class="w-full rounded border p-2"
-          placeholder="Email"
-          value="${supplier ? supplier.email : ""}"
-        >
-      </div>
-    `,
-
-    footerHTML: `
-      <button
-        id="cancelModalBtn"
-        class="cursor-pointer rounded px-4 py-2 hover:bg-gray-100"
-      >
-        Cancel
-      </button>
-
-      <button
-        id="saveSupplierBtn"
-        class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 cursor-pointer"
-      >
-        Save
-      </button>
-    `,
-  });
-
-  document
-    .getElementById("cancelModalBtn")
-    .addEventListener("click", closeModal);
-
-  document
-    .getElementById("saveSupplierBtn")
-    .addEventListener("click", () =>
-      saveSupplier(supplier ? supplier.id : null),
-    );
-}
-
 // Save (Create or Update) Handler
 async function saveSupplier(id = null) {
   const name = document.getElementById("supplierName").value.trim();
@@ -83,6 +14,7 @@ async function saveSupplier(id = null) {
     .getElementById("supplierContact")
     .value.trim();
   const email = document.getElementById("supplierEmail").value.trim();
+  const status = document.getElementById("supplierStatus").value.trim();
 
   if (!name || !contact_number || !email) {
     alert("Please fill in all fields.");
@@ -92,9 +24,9 @@ async function saveSupplier(id = null) {
   try {
     let result;
     if (id) {
-      result = await updateSupplier(id, name, contact_number, email);
+      result = await updateSupplier(id, name, contact_number, email, status);
     } else {
-      result = await createSupplier(name, contact_number, email);
+      result = await createSupplier(name, contact_number, email, status);
     }
 
     if (result.status === "error") {
@@ -150,6 +82,7 @@ async function loadSuppliers() {
   try {
     const result = await fetchSuppliers();
     const total = document.getElementById("totalSuppliers");
+    console.log(result.suppliers);
 
     if (result.status === "success") {
       allSuppliers = result.suppliers;
@@ -234,7 +167,7 @@ function renderSuppliers(suppliers) {
           <i data-lucide="search-x" class="w-10 h-10 text-gray-300"></i>
           <p class="text-base font-medium">No suppliers found</p>
           <p class="text-sm text-gray-400">
-            Try adjusting your search or filter.
+            Your suppliers table looks empty. Try adjusting your search or filter.
           </p>
         </div>
       </td>
@@ -249,48 +182,64 @@ function renderSuppliers(suppliers) {
   }
 
   suppliers.forEach((supplier) => {
+    const isActive =
+      typeof supplier.status !== "undefined"
+        ? supplier.status.toLowerCase() === "active"
+        : Boolean(supplier.active);
+
+    // Dynamic Tailwind classes for Active (Green) vs Inactive (Red)
+    const badgeBg = isActive
+      ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
+      : "bg-rose-50 text-rose-700 border-rose-200/60";
+
+    const dotBg = isActive ? "bg-emerald-500" : "bg-rose-500";
+    const statusText = isActive ? "Active" : "Inactive";
+
     const tr = document.createElement("tr");
     tr.className = "hover:bg-gray-50/80 transition group";
 
     tr.innerHTML = `
-      <td class="py-3.5 px-4 sm:px-6">
-          <div class="font-bold text-gray-900 group-hover:text-blue-600 transition">
-              ${supplier.name}</div>
-          <div class="text-[11px] text-gray-400 font-medium">ID: SUP-${supplier.id}</div>
-      </td>
-      <td class="py-3.5 px-4 sm:px-6 text-gray-600 font-medium">${supplier.contact_number}</td>
-      <td class="py-3.5 px-4 sm:px-6">
-          <a href="mailto:${supplier.email}"
-              class="text-blue-600 hover:underline font-medium">${supplier.email}</a>
-      </td>
-      <td class="py-3.5 px-4 sm:px-6">
-          <span
-              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              Active
-          </span>
-      </td>
-      <td class="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
-          <div class="flex items-center justify-end space-x-1">
-              <button title="Edit Supplier"
-                  class="edit-btn p-1.5 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition cursor-pointer">
-                  <i data-lucide="pencil" class="w-4 h-4"></i>
-              </button>
+    <td class="py-3.5 px-4 sm:px-6 text-left">
+        <div class="font-bold text-gray-900 group-hover:text-blue-600 transition">
+            ${supplier.name}
+        </div>
+        <div class="text-[11px] text-gray-400 font-medium">ID: SUP-${supplier.id}</div>
+    </td>
 
-              <button title="Delete Supplier"
-                  class="delete-btn p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition cursor-pointer">
-                  <i data-lucide="trash-2" class="w-4 h-4"></i>
-              </button>
-          </div>
-      </td>
-    `;
+    <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
+        ${supplier.contact_number}
+    </td>
 
-    // Bind Edit event listener
+    <td class="py-3.5 px-4 sm:px-6 text-left">
+        <a href="mailto:${supplier.email}" class="text-blue-600 hover:underline font-medium">
+            ${supplier.email}
+        </a>
+    </td>
+
+    <td class="py-3.5 px-4 sm:px-6 text-left">
+       <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${badgeBg}">
+            <span class="w-1.5 h-1.5 rounded-full ${dotBg}"></span>
+            ${statusText}
+        </span>
+    </td>
+
+    <td class="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
+        <div class="flex items-center justify-end space-x-1">
+            <button title="Edit Supplier" class="edit-btn p-1.5 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition cursor-pointer">
+                <i data-lucide="pencil" class="w-4 h-4"></i>
+            </button>
+            <button title="Delete Supplier" class="delete-btn p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition cursor-pointer">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </td>
+  `;
+
+    // Bind Listeners
     tr.querySelector(".edit-btn").addEventListener("click", () => {
       openSupplierModal({ title: "Edit Supplier", supplier });
     });
 
-    // Bind Delete event listener
     tr.querySelector(".delete-btn").addEventListener("click", () => {
       removeSupplier(supplier.id);
     });
@@ -304,23 +253,119 @@ function renderSuppliers(suppliers) {
 }
 
 // ======================
-// Filter Button Toggle
+// Add Supplier Modal
 // ======================
-// const filterBtns = [
-//   document.getElementById("allButton"),
-//   document.getElementById("activeBtn"),
-//   document.getElementById("inactiveBtn"),
-// ];
+const addBtn = document.getElementById("addBtn");
+if (addBtn) {
+  addBtn.addEventListener("click", () => {
+    openSupplierModal({ title: "Add Supplier" });
+  });
+}
 
-// const activeClasses = ["bg-white", "text-gray-900", "shadow-sm"];
+// Helper function to build Add/Edit Modal dynamically
+// Helper function to build Add/Edit Modal dynamically
+function openSupplierModal({ title, supplier = null }) {
+  openModal({
+    titleText: title,
 
-// filterBtns.forEach((selectedBtn) => {
-//   if (!selectedBtn) return;
-//   selectedBtn.addEventListener("click", () => {
-//     filterBtns.forEach((btn) => btn && btn.classList.remove(...activeClasses));
-//     selectedBtn.classList.add(...activeClasses);
-//   });
-// });
+    bodyHTML: `
+    <form id="supplierForm" onsubmit="event.preventDefault();" class="flex flex-col gap-4">
+      <div>
+        <label for="supplierName" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+          Supplier Name <span class="text-red-500">*</span>
+        </label>
+        <input
+          id="supplierName"
+          type="text"
+          required
+          class="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          placeholder="Acer Inc."
+          value="${supplier ? supplier.name : ""}"
+        >
+      </div>
 
-// Initialize on load
+      <div>
+        <label for="supplierContact" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+          Contact Number <span class="text-red-500">*</span>
+        </label>
+        <input
+          id="supplierContact"
+          type="text"
+          required
+          class="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          placeholder="0912345678"
+          value="${supplier ? supplier.contact_number : ""}"
+        >
+      </div>
+
+      <div>
+        <label for="supplierEmail" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+          Email Address <span class="text-red-500">*</span>
+        </label>
+        <input
+          id="supplierEmail"
+          type="email"
+          required
+          class="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          placeholder="supplier@gmail.com"
+          value="${supplier ? supplier.email : ""}"
+        >
+      </div>
+
+      <div>
+        <label for="supplierStatus" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+          Status <span class="text-red-500">*</span>
+        </label>
+        <div class="relative">
+          <select
+            id="supplierStatus"
+            name="status"
+            class="w-full appearance-none rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 bg-white shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 pr-10 cursor-pointer"
+          >
+            <option value="1" ${!supplier || supplier.status === "active" || supplier.active == 1 ? "selected" : ""}>Active</option>
+            <option value="0" ${supplier && (supplier.status === "inactive" || supplier.active == 0) ? "selected" : ""}>Inactive</option>
+          </select>
+          
+          <!-- Custom Dropdown Chevron Icon -->
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400">
+            <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </form>
+  `,
+
+    footerHTML: `
+      <button
+        id="cancelModalBtn"
+        type="button"
+        class="cursor-pointer rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition"
+      >
+        Cancel
+      </button>
+
+      <button
+        id="saveSupplierBtn"
+        type="button"
+        class="inline-flex cursor-pointer items-center justify-center rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-800 active:bg-blue-800 transition focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+      >
+        Save Supplier
+      </button>
+    `,
+  });
+
+  document
+    .getElementById("cancelModalBtn")
+    .addEventListener("click", closeModal);
+
+  document
+    .getElementById("saveSupplierBtn")
+    .addEventListener("click", () =>
+      saveSupplier(supplier ? supplier.id : null),
+    );
+}
+
+// Initialize data on load
 loadSuppliers();
