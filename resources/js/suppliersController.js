@@ -4,11 +4,20 @@ import {
   updateSupplier,
   deleteSupplier,
 } from "./api/suppliersApi.js";
-import { openModal, closeModal } from "./modalController.js";
+
+// Save (Create or Update) Handler
+import {
+  openModal,
+  closeModal,
+  showModalErrors,
+  clearModalErrors,
+} from "./modalController.js";
 
 console.log("loaded");
-// Save (Create or Update) Handler
+
 async function saveSupplier(id = null) {
+  clearModalErrors();
+
   const name = document.getElementById("supplierName").value.trim();
   const contact_number = document
     .getElementById("supplierContact")
@@ -16,22 +25,28 @@ async function saveSupplier(id = null) {
   const email = document.getElementById("supplierEmail").value.trim();
   const status = document.getElementById("supplierStatus").value.trim();
 
-  if (!name || !contact_number || !email) {
-    alert("Please fill in all fields.");
+  // Basic client-side check before fetching
+  const localErrors = {};
+  if (!name) localErrors["name"] = "Supplier name is required.";
+  if (!contact_number)
+    localErrors["contact_number"] = "Contact number is required.";
+  if (!email) localErrors["email"] = "Email address is required.";
+
+  if (Object.keys(localErrors).length > 0) {
+    showModalErrors(localErrors);
     return;
   }
 
   try {
-    let result;
-    if (id) {
-      result = await updateSupplier(id, name, contact_number, email, status);
-    } else {
-      result = await createSupplier(name, contact_number, email, status);
-    }
+    const result = id
+      ? await updateSupplier(id, name, contact_number, email, status)
+      : await createSupplier(name, contact_number, email, status);
 
     if (result.status === "error") {
-      console.log(result.errors || result.message);
-      alert(result.message || "Failed to save supplier.");
+      if (result.errors) {
+        // Display validation errors returned directly from PHP
+        showModalErrors(result.errors);
+      }
       return;
     }
 
@@ -40,7 +55,6 @@ async function saveSupplier(id = null) {
     loadSuppliers();
   } catch (error) {
     console.error(error);
-    alert("An error occurred while saving.");
   }
 }
 
@@ -75,18 +89,24 @@ let allSuppliers = [];
 let currentFilter = "all";
 let currentSearch = "";
 
-// ======================
-// Load & Render Table
-// ======================
 async function loadSuppliers() {
   try {
     const result = await fetchSuppliers();
-    const total = document.getElementById("totalSuppliers");
+    const totalCount = document.getElementById("totalSuppliers");
+    const activeCount = document.getElementById("totalActive");
+
     console.log(result.suppliers);
 
     if (result.status === "success") {
       allSuppliers = result.suppliers;
-      total.innerHTML = allSuppliers.length;
+
+      totalCount.innerHTML = allSuppliers.length;
+      activeCount.innerHTML = allSuppliers.filter((supplier) => {
+        if (supplier.active) {
+          return supplier;
+        }
+      }).length;
+
       applyFilters();
     } else {
       alert(result.message || "Failed to load suppliers.");
@@ -104,15 +124,21 @@ function applyFilters() {
   const term = currentSearch.trim().toLowerCase();
 
   const filtered = allSuppliers.filter((supplier) => {
-    const status = (supplier.status || "active").toLowerCase();
+    const isActive =
+      typeof supplier.active !== "undefined"
+        ? Number(supplier.active) === 1
+        : supplier.status === "active";
 
-    const matchesFilter = currentFilter === "all" || status === currentFilter;
+    const statusText = isActive ? "active" : "inactive";
+
+    const matchesFilter =
+      currentFilter === "all" || statusText === currentFilter;
 
     const matchesSearch =
       term === "" ||
-      supplier.name.toLowerCase().includes(term) ||
-      supplier.contact_number.toLowerCase().includes(term) ||
-      supplier.email.toLowerCase().includes(term);
+      supplier.name?.toLowerCase().includes(term) ||
+      supplier.contact_number?.toLowerCase().includes(term) ||
+      supplier.email?.toLowerCase().includes(term);
 
     return matchesFilter && matchesSearch;
   });
@@ -183,9 +209,9 @@ function renderSuppliers(suppliers) {
 
   suppliers.forEach((supplier) => {
     const isActive =
-      typeof supplier.status !== "undefined"
-        ? supplier.status.toLowerCase() === "active"
-        : Boolean(supplier.active);
+      typeof supplier.active !== "undefined"
+        ? Number(supplier.active) === 1
+        : (supplier.status || "").toLowerCase() === "active";
 
     // Dynamic Tailwind classes for Active (Green) vs Inactive (Red)
     const badgeBg = isActive
@@ -276,12 +302,13 @@ function openSupplierModal({ title, supplier = null }) {
         </label>
         <input
           id="supplierName"
+          name="name"
           type="text"
-          required
           class="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           placeholder="Acer Inc."
           value="${supplier ? supplier.name : ""}"
         >
+        <p class="error-msg text-xs text-rose-500 font-medium mt-1 hidden" id="error-name"></p>
       </div>
 
       <div>
@@ -290,12 +317,13 @@ function openSupplierModal({ title, supplier = null }) {
         </label>
         <input
           id="supplierContact"
+          name="contact_number"
           type="text"
-          required
           class="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           placeholder="0912345678"
           value="${supplier ? supplier.contact_number : ""}"
         >
+        <p class="error-msg text-xs text-rose-500 font-medium mt-1 hidden" id="error-contact_number"></p>
       </div>
 
       <div>
@@ -304,12 +332,13 @@ function openSupplierModal({ title, supplier = null }) {
         </label>
         <input
           id="supplierEmail"
+          name="email"
           type="email"
-          required
           class="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           placeholder="supplier@gmail.com"
           value="${supplier ? supplier.email : ""}"
         >
+        <p class="error-msg text-xs text-rose-500 font-medium mt-1 hidden" id="error-email"></p>
       </div>
 
       <div>
@@ -333,7 +362,9 @@ function openSupplierModal({ title, supplier = null }) {
             </svg>
           </div>
         </div>
+        
       </div>
+
     </form>
   `,
 

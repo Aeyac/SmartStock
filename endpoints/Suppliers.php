@@ -1,18 +1,19 @@
 <?php
+session_start();
 
 require_once "../db.php";
+require_once "../utils/Utility.php";
 
-session_start();
 header('Content-Type: application/json; charset=utf-8');
 
-// if (!isset($_SESSION['user_id'])) {
-//     http_response_code(401);
-//     echo json_encode([
-//         'status' => 'error',
-//         'message' => 'Not authenticated.'
-//     ]);
-//     exit;
-// }
+if (!isset($_SESSION['user_id'])) {
+    http_response_code(401);
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Not authenticated.'
+    ]);
+    exit;
+}
 
 $userId = $_SESSION['user_id'];
 // $userId = 1;
@@ -42,164 +43,90 @@ switch ($method) {
 
 
     //POST - Create Supplier
-
     case 'POST':
-        $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        $input = json_decode(file_get_contents('php://input'), true) ?? [];
+        $validation = validateSupplierInput($mydb, $userId, $input);
 
-        $name = trim($data['name'] ?? '');
-        $contact = trim($data['contact_number'] ?? '');
-        $email = trim($data['email'] ?? '');
-        $status = trim($data['status'] ?? 1);
-
-        $errors = [];
-
-        if ($name === '')
-            $errors['name'] = 'Supplier name is required.';
-
-        if ($contact === '') {
-            $errors['contact_number'] = 'Contact number is required.';
-        } elseif (strlen($contact) > 15) {
-            $errors['contact_number'] = 'Maximum of 15 digits.';
-        } elseif (!preg_match('/^[0-9]+$/', $contact)) {
-            $errors['contact_number'] = 'Contact number must contain digits only.';
-        }
-
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $errors['email'] = 'Invalid email address.';
-        } else {
-
-            $mydb->select('suppliers', 'id', [
-                'email' => $email,
-                'user_id' => $userId
+        if (!$validation['isValid']) {
+            echo json_encode([
+                'status' => 'error',
+                'errors' => $validation['errors']
             ]);
-
-            if ($mydb->res && $mydb->res->fetch_assoc()) {
-                $errors['email'] = 'Supplier already exists.';
-            }
-        }
-
-        if (!empty($errors)) {
-            // http_response_code(422);
-            echo json_encode(['status' => 'error', 'errors' => $errors]);
             exit;
         }
 
+        $validData = $validation['data'];
+
         $id = $mydb->insert('suppliers', [
             'user_id' => $userId,
-            'name' => $name,
-            'contact_number' => $contact,
-            'email' => $email,
-            'active' => $status
+            'name' => $validData['name'],
+            'contact_number' => $validData['contact_number'],
+            'email' => $validData['email'],
+            'active' => $validData['status']
         ]);
-
-        http_response_code(201);
 
         echo json_encode([
             'status' => 'success',
             'message' => 'Supplier created successfully.',
             'id' => $id
         ]);
-
         break;
 
 
 
     // PUT - Update Supplier
-
     case 'PUT':
-
         $id = (int) ($_GET['id'] ?? 0);
 
-        $data = json_decode(file_get_contents('php://input'), true) ?? [];
-
-        $name = trim($data['name'] ?? '');
-        $contact = trim($data['contact_number'] ?? '');
-        $email = trim($data['email'] ?? '');
-        $status = trim($data['status'] ?? 1);
-
-
+        // Verify existence first
         $mydb->select('suppliers', 'id', [
             'id' => $id,
             'user_id' => $userId
         ]);
 
         if (!$mydb->res || !$mydb->res->fetch_assoc()) {
-
             http_response_code(404);
-
             echo json_encode([
                 'status' => 'error',
                 'message' => 'Supplier not found.'
             ]);
-
             exit;
         }
 
-        $errors = [];
+        $input = json_decode(file_get_contents('php://input'), true) ?? [];
 
-        if ($name === '') {
-            $errors['name'] = 'Supplier name is required.';
-        }
+        // Pass current $id so email uniqueness check ignores the record being updated
+        $validation = validateSupplierInput($mydb, $userId, $input, $id);
 
-        if ($contact === '') {
-            $errors['contact_number'] = 'Contact number is required.';
-        } elseif (strlen($contact) > 15) {
-            $errors['contact_number'] = 'Maximum of 15 digits.';
-        }
-
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $errors['email'] = 'Invalid email address.';
-        } else {
-
-            $mydb->select('suppliers', '*', [
-                'email' => $email,
-                'user_id' => $userId
-            ]);
-
-            $existing = $mydb->res
-                ? $mydb->res->fetch_assoc()
-                : null;
-
-            if ($existing && (int) $existing['id'] !== $id) {
-                $errors['email'] = 'Supplier already exists.';
-            }
-
-        }
-
-        if (!empty($errors)) {
-
+        if (!$validation['isValid']) {
             http_response_code(422);
-
             echo json_encode([
                 'status' => 'error',
-                'errors' => $errors
+                'errors' => $validation['errors']
             ]);
-
             exit;
         }
+
+        $validData = $validation['data'];
 
         $mydb->update(
             'suppliers',
-
             [
-                'name' => $name,
-                'contact_number' => $contact,
-                'email' => $email,
-                'active' => $status
+                'name' => $validData['name'],
+                'contact_number' => $validData['contact_number'],
+                'email' => $validData['email'],
+                'active' => $validData['status']
             ],
-
             [
                 'id' => $id,
                 'user_id' => $userId
             ]
-
         );
 
         echo json_encode([
             'status' => 'success',
             'message' => 'Supplier updated successfully.'
         ]);
-
         break;
 
 

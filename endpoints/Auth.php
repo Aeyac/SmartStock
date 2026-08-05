@@ -79,7 +79,7 @@ switch ($method) {
                 exit;
             }
 
-            session_regenerate_id(true);
+            // session_regenerate_id(true);
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_name'] = $user['name'];
             $_SESSION['user_email'] = $user['email'];

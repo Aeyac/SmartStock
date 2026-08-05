@@ -82,6 +82,16 @@ if (loginForm && !document.getElementById("name")) {
 
     try {
       const result = await loginUser(email, password);
+
+      if (result.status === "error") {
+        alert(result.message || "Login failed. Check your credentials.");
+        if (btn) {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+        }
+        return;
+      }
+
       console.log("Login successful:", result);
 
       window.location.replace("./resources/views/suppliers.php");
