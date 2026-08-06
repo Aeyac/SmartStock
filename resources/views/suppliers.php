@@ -53,7 +53,7 @@ if (!isset($_SESSION['user_id'])) {
                         <div class="pl-4 sm:pl-6 text-center sm:text-left">
                             <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">ACTIVE
                                 SUPPLIERS</span>
-                            <span id="totalActive" class="text-base sm:text-lg font-bold text-gray-900">14</span>
+                            <span id="totalActive" class="text-base sm:text-lg font-bold text-emerald-700">14</span>
                         </div>
                     </div>
 

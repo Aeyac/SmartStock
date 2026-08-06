@@ -88,7 +88,8 @@ switch ($method) {
                 "SELECT i.*, c.name AS category_name 
                  FROM items i
                  LEFT JOIN categories c ON c.id = i.category_id
-                 WHERE i.user_id = ? AND i.stock <= i.safety_stock 
+                 WHERE i.user_id = ? AND i.deleted_at IS NULL
+                 AND i.stock <= i.safety_stock 
                  ORDER BY i.stock ASC"
             );
             $stmt->bind_param('i', $userId);
@@ -107,7 +108,7 @@ switch ($method) {
             "SELECT i.*, c.name AS category_name 
              FROM items i
              LEFT JOIN categories c ON c.id = i.category_id
-             WHERE i.user_id = ?
+             WHERE i.user_id = ? AND i.deleted_at IS NULL
              ORDER BY i.name ASC"
         );
         $stmt->bind_param('i', $userId);
@@ -160,7 +161,8 @@ switch ($method) {
 
         $mydb->select('items', 'id', [
             'id' => $id,
-            'user_id' => $userId
+            'user_id' => $userId,
+            'deleted_at' => null,
         ]);
 
         if (!$mydb->res || !$mydb->res->fetch_assoc()) {
@@ -196,7 +198,8 @@ switch ($method) {
             ],
             [
                 'id' => $id,
-                'user_id' => $userId
+                'user_id' => $userId,
+                'deleted_at' => null
             ]
         );
 
@@ -212,11 +215,11 @@ switch ($method) {
 
         $mydb->select('items', 'id', [
             'id' => $id,
-            'user_id' => $userId
+            'user_id' => $userId,
+            'deleted_at' => null
         ]);
 
         if (!$mydb->res || !$mydb->res->fetch_assoc()) {
-            http_response_code(404);
             echo json_encode([
                 'status' => 'error',
                 'message' => 'Item not found.'
@@ -224,10 +227,16 @@ switch ($method) {
             exit;
         }
 
-        $mydb->delete('items', [
-            'id' => $id,
-            'user_id' => $userId
-        ]);
+        $mydb->update(
+            'items',
+            [
+                'deleted_at' => date('Y-m-d H:i:s')
+            ],
+            [
+                'id' => $id,
+                'user_id' => $userId
+            ]
+        );
 
         echo json_encode([
             'status' => 'success',
@@ -236,7 +245,6 @@ switch ($method) {
         break;
 
     default:
-        http_response_code(405);
         echo json_encode([
             'status' => 'error',
             'message' => 'Method Not Allowed.'

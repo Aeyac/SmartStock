@@ -1,5 +1,6 @@
 <?php
-class myDB {
+class myDB
+{
     private $servername = "localhost";
     private $username = "root";
     private $password = "";
@@ -7,7 +8,8 @@ class myDB {
     public $res;
     public $conn; // public so any file can run its own manual query when needed
 
-    public function __construct() {
+    public function __construct()
+    {
         try {
             $this->conn = new mysqli($this->servername, $this->username, $this->password, $this->dbname);
         } catch (Exception $e) {
@@ -15,93 +17,165 @@ class myDB {
         }
     }
 
-    public function __destruct() {
+    public function __destruct()
+    {
         $this->conn->close();
     }
 
-    public function insert($table, $data) {
+    public function insert($table, $data)
+    {
         try {
-            $table_columns = implode(',', array_keys($data));
-            $prep = $types = "";
-            foreach ($data as $key => $value) {
-                $prep .= '?,';
-                $types .= substr(gettype($value), 0, 1);
+            $columns = implode(',', array_keys($data));
+            $placeholders = implode(',', array_fill(0, count($data), '?'));
+
+            $types = '';
+            foreach ($data as $value) {
+                $types .= $this->getBindType($value);
             }
-            $prep = substr($prep, 0, -1);
-            $stmt = $this->conn->prepare("INSERT INTO $table($table_columns) VALUES ($prep)");
+
+            $stmt = $this->conn->prepare("INSERT INTO $table ($columns) VALUES ($placeholders)");
             $stmt->bind_param($types, ...array_values($data));
             $stmt->execute();
+
             $insertId = $this->conn->insert_id;
+
             $stmt->close();
+
             return $insertId;
         } catch (Exception $e) {
-            die("Error while inserting data!. <br>" . $e);
+            die("Error while inserting data.<br>" . $e);
         }
     }
 
-    public function select($table, $row = "*", $where = NULL) {
+    public function select($table, $row = "*", $where = null)
+    {
         try {
-            if (!is_null($where)) {
-                $cond = $types = "";
-                foreach ($where as $key => $value) {
-                    $cond .= $key . " = ? AND ";
-                    $types .= substr(gettype($value), 0, 1);
+
+            if ($where !== null) {
+
+                $conditions = [];
+                $types = "";
+                $params = [];
+
+                foreach ($where as $column => $value) {
+                    if ($value === null) {
+                        $conditions[] = "$column IS NULL";
+                    } else {
+                        $conditions[] = "$column = ?";
+                        $types .= $this->getBindType($value);
+                        $params[] = $value;
+                    }
                 }
-                $cond = substr($cond, 0, -4);
-                $stmt = $this->conn->prepare("SELECT $row FROM $table WHERE $cond");
-                $stmt->bind_param($types, ...array_values($where));
+
+                $sql = "SELECT $row FROM $table WHERE " . implode(" AND ", $conditions);
+                $stmt = $this->conn->prepare($sql);
+
+                if (!empty($params)) {
+                    $stmt->bind_param($types, ...$params);
+                }
             } else {
                 $stmt = $this->conn->prepare("SELECT $row FROM $table");
             }
+
             $stmt->execute();
             $this->res = $stmt->get_result();
+
         } catch (Exception $e) {
-            die("Error requesting data! . <br>" . $e);
+            die("Error requesting data.<br>" . $e);
         }
     }
 
-    // Added the same way insert()/select() already work — only handles
-    // simple "column = value" conditions.
-    public function update($table, $data, $where) {
+    public function update($table, $data, $where)
+    {
         try {
-            $set = $types = "";
-            foreach ($data as $key => $value) {
-                $set .= "$key = ?,";
-                $types .= substr(gettype($value), 0, 1);
-            }
-            $set = substr($set, 0, -1);
+            $set = [];
+            $conditions = [];
 
-            $cond = $condTypes = "";
-            foreach ($where as $key => $value) {
-                $cond .= "$key = ? AND ";
-                $condTypes .= substr(gettype($value), 0, 1);
-            }
-            $cond = substr($cond, 0, -4);
+            $types = "";
+            $params = [];
 
-            $stmt = $this->conn->prepare("UPDATE $table SET $set WHERE $cond");
-            $stmt->bind_param($types . $condTypes, ...array_merge(array_values($data), array_values($where)));
+            // SET
+            foreach ($data as $column => $value) {
+                $set[] = "$column = ?";
+                $types .= $this->getBindType($value);
+                $params[] = $value;
+            }
+
+            // WHERE
+            foreach ($where as $column => $value) {
+
+                if ($value === null) {
+                    $conditions[] = "$column IS NULL";
+                } else {
+                    $conditions[] = "$column = ?";
+                    $types .= $this->getBindType($value);
+                    $params[] = $value;
+                }
+            }
+
+            $sql = "UPDATE $table SET "
+                . implode(", ", $set)
+                . " WHERE "
+                . implode(" AND ", $conditions);
+
+            $stmt = $this->conn->prepare($sql);
+
+            if (!empty($params)) {
+                $stmt->bind_param($types, ...$params);
+            }
+
             $stmt->execute();
             $stmt->close();
+
         } catch (Exception $e) {
-            die("Error while updating data!. <br>" . $e);
+            die("Error while updating data.<br>" . $e);
         }
     }
 
-    public function delete($table, $where) {
+    public function delete($table, $where)
+    {
         try {
-            $cond = $types = "";
-            foreach ($where as $key => $value) {
-                $cond .= "$key = ? AND ";
-                $types .= substr(gettype($value), 0, 1);
-            }
-            $cond = substr($cond, 0, -4);
+            $conditions = [];
+            $types = "";
+            $params = [];
 
-            $stmt = $this->conn->prepare("DELETE FROM $table WHERE $cond");
-            $stmt->bind_param($types, ...array_values($where));
+            foreach ($where as $column => $value) {
+
+                if ($value === null) {
+                    $conditions[] = "$column IS NULL";
+                } else {
+                    $conditions[] = "$column = ?";
+                    $types .= $this->getBindType($value);
+                    $params[] = $value;
+                }
+            }
+
+            $sql = "DELETE FROM $table WHERE " . implode(" AND ", $conditions);
+            $stmt = $this->conn->prepare($sql);
+
+            if (!empty($params)) {
+                $stmt->bind_param($types, ...$params);
+            }
+
             $stmt->execute();
             $stmt->close();
+
         } catch (Exception $e) {
-            die("Error while deleting data!. <br>" . $e);
+            die("Error while deleting data.<br>" . $e);
         }
+    }
+
+
+    private function getBindType($value)
+    {
+        if (is_int($value)) {
+            return 'i';
+        }
+
+        if (is_float($value)) {
+            return 'd';
+        }
+
+        return 's';
     }
 }

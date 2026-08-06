@@ -13,31 +13,31 @@
 
         <!-- Navigation Links -->
         <nav class="p-4 space-y-1">
-            <a href="#"
+            <a id="dashboardNav" href="./dashboard.php"
                 class="flex items-center space-x-3 px-4 py-3 text-gray-600 rounded-lg hover:bg-gray-50 font-medium text-sm transition">
                 <i data-lucide="layout-grid" class="w-5 h-5"></i>
                 <span>Dashboard</span>
             </a>
 
-            <a href="#"
+            <a id="inventoryNav" href="./items.php"
                 class="flex items-center space-x-3 px-4 py-3 text-gray-600 rounded-lg hover:bg-gray-50 font-medium text-sm transition">
                 <i data-lucide="check-square" class="w-5 h-5"></i>
                 <span>Inventory</span>
             </a>
 
-            <a href="#"
-                class="flex items-center space-x-3 px-4 py-3 bg-gray-100 text-gray-900 rounded-lg font-semibold text-sm transition">
+            <a id="supplierNav" href="./suppliers.php"
+                class="flex items-center space-x-3 px-4 py-3 text-gray-900 rounded-lg font-semibold text-sm transition">
                 <i data-lucide="grid" class="w-5 h-5"></i>
                 <span>Suppliers</span>
             </a>
 
-            <a href="#"
+            <a id="purchasesNav" href="./purchases.php"
                 class="flex items-center space-x-3 px-4 py-3 text-gray-600 rounded-lg hover:bg-gray-50 font-medium text-sm transition">
                 <i data-lucide="shopping-bag" class="w-5 h-5"></i>
                 <span>Purchases</span>
             </a>
 
-            <a href="#"
+            <a id="salesrNav" href="./sales.php"
                 class="flex items-center space-x-3 px-4 py-3 text-gray-600 rounded-lg hover:bg-gray-50 font-medium text-sm transition">
                 <i data-lucide="tag" class="w-5 h-5"></i>
                 <span>Sales</span>
@@ -45,3 +45,31 @@
         </nav>
     </div>
 </aside>
+
+<script>
+    // Get the current page file name from the URL path
+    const currentPage = window.location.pathname.split("/").pop();
+
+    // Map your PHP file names to the corresponding navigation link IDs
+    const navMapping = {
+        'dashboard.php': 'dashboardNav',
+        'items.php': 'inventoryNav',
+        'suppliers.php': 'supplierNav',
+        'purchases.php': 'purchasesNav',
+        'sales.php': 'salesrNav' // Matches your id="salesrNav"
+    };
+
+    // Get the ID of the link that should be active
+    const activeLinkId = navMapping[currentPage];
+
+    if (activeLinkId) {
+        // Target the active link element
+        const activeLink = document.getElementById(activeLinkId);
+
+        if (activeLink) {
+            // Remove the default inactive styling
+            activeLink.classList.remove('text-gray-600', 'hover:bg-gray-50', 'font-medium');
+            activeLink.classList.add('bg-gray-100', 'text-gray-900', 'font-semibold');
+        }
+    }
+</script>

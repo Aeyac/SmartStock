@@ -16,12 +16,7 @@
 <body
     class="bg-slate-50 font-sans text-slate-900 antialiased min-h-screen flex flex-col justify-between relative overflow-x-hidden">
 
-
-    <a href="./resources/views/suppliers.php"> redirect</a>
-    <!-- background -->
     <?php require_once "./resources/views/partials/background.php" ?>
-
-    <!-- Top Navigation Header -->
     <?php require_once "./resources/views/partials/header.php" ?>
 
     <!-- Main Card Container -->
@@ -84,8 +79,8 @@
                 <p class="text-xs text-slate-600 font-medium">
                     New to SmartStock?
                     <a class="font-bold text-slate-900 hover:underline transition-all ml-1"
-                        href="./resources/views/create.php">Create
-                        account</a>
+                        href="./resources/views/create.php">Create account
+                    </a>
                 </p>
             </div>
         </div>
@@ -95,7 +90,6 @@
     <?php require_once "./resources/views/partials/footer.php" ?>
 
     <script type="module" src="./resources/js/authController.js"></script>
-    <!-- Script -->
 </body>
 
 </html>

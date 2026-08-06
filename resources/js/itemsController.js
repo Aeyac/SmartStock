@@ -5,7 +5,12 @@ import {
   deleteItem,
 } from "./api/itemsApi.js";
 import { fetchCategories } from "./api/categoriesApi.js";
-import { openModal, closeModal, showModalErrors, clearModalErrors } from "./modalController.js";
+import {
+  openModal,
+  closeModal,
+  showModalErrors,
+  clearModalErrors,
+} from "./modalController.js";
 
 console.log("Items controller loaded");
 
@@ -45,6 +50,8 @@ async function loadCategories() {
 async function loadItems() {
   try {
     const result = await fetchItems();
+
+    console.log(result)
     const totalEl = document.getElementById("totalItems");
     const lowStockEl = document.getElementById("totalLowStock");
 
@@ -55,7 +62,7 @@ async function loadItems() {
       if (totalEl) totalEl.textContent = allItems.length;
 
       const lowStockCount = allItems.filter(
-        (item) => Number(item.stock) <= Number(item.safety_stock)
+        (item) => Number(item.stock) <= Number(item.safety_stock),
       ).length;
       if (lowStockEl) lowStockEl.textContent = lowStockCount;
 
@@ -82,7 +89,8 @@ function applyFilters() {
 
     const matchesFilter =
       currentFilter === "all" ||
-      (currentFilter === "low_stock" && Number(item.stock) <= Number(item.safety_stock));
+      (currentFilter === "low_stock" &&
+        Number(item.stock) <= Number(item.safety_stock));
 
     return matchesSearch && matchesFilter;
   });
@@ -93,7 +101,7 @@ function applyFilters() {
 function renderItems(items) {
   const tbody = document.querySelector("#itemsTableBody");
   const showingCount = document.getElementById("showingCount");
-  
+
   if (showingCount) showingCount.textContent = items.length;
   if (!tbody) return;
 
@@ -121,11 +129,11 @@ function renderItems(items) {
     const isLowStock = currentStock <= safetyStock;
 
     const stockBadge = isLowStock
-      ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-           <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Low Stock (${currentStock})
+      ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-bold text-amber-700">
+            Low Stock (${currentStock})
          </span>`
-      : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-           <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> ${currentStock} in stock
+      : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-bold text-emerald-700">
+            (${currentStock}) in stock
          </span>`;
 
     const tr = document.createElement("tr");
@@ -190,15 +198,19 @@ function setupEventListeners() {
   if (allButton && lowStockBtn) {
     allButton.addEventListener("click", () => {
       currentFilter = "all";
-      allButton.className = "px-3 py-1.5 rounded-md bg-white text-gray-900 shadow-sm flex-1 sm:flex-none text-center cursor-pointer";
-      lowStockBtn.className = "px-3 py-1.5 rounded-md hover:text-gray-900 transition flex-1 sm:flex-none text-center cursor-pointer";
+      allButton.className =
+        "px-3 py-1.5 rounded-md bg-white text-gray-900 shadow-sm flex-1 sm:flex-none text-center cursor-pointer";
+      lowStockBtn.className =
+        "px-3 py-1.5 rounded-md hover:text-gray-900 transition flex-1 sm:flex-none text-center cursor-pointer";
       applyFilters();
     });
 
     lowStockBtn.addEventListener("click", () => {
       currentFilter = "low_stock";
-      lowStockBtn.className = "px-3 py-1.5 rounded-md bg-white text-gray-900 shadow-sm flex-1 sm:flex-none text-center cursor-pointer";
-      allButton.className = "px-3 py-1.5 rounded-md hover:text-gray-900 transition flex-1 sm:flex-none text-center cursor-pointer";
+      lowStockBtn.className =
+        "px-3 py-1.5 rounded-md bg-white text-gray-900 shadow-sm flex-1 sm:flex-none text-center cursor-pointer";
+      allButton.className =
+        "px-3 py-1.5 rounded-md hover:text-gray-900 transition flex-1 sm:flex-none text-center cursor-pointer";
       applyFilters();
     });
   }
@@ -220,13 +232,17 @@ async function saveItem(id = null) {
   const name = document.getElementById("itemName").value.trim();
   const category_id = document.getElementById("itemCategory").value;
   const safety_stock = document.getElementById("itemSafetyStock").value.trim();
-  const selling_price = document.getElementById("itemSellingPrice").value.trim();
+  const selling_price = document
+    .getElementById("itemSellingPrice")
+    .value.trim();
 
   const localErrors = {};
   if (!name) localErrors["name"] = "Item name is required.";
   if (!category_id) localErrors["category_id"] = "Please select a category.";
-  if (safety_stock === "") localErrors["safety_stock"] = "Safety stock is required.";
-  if (selling_price === "") localErrors["selling_price"] = "Selling price is required.";
+  if (safety_stock === "")
+    localErrors["safety_stock"] = "Safety stock is required.";
+  if (selling_price === "")
+    localErrors["selling_price"] = "Selling price is required.";
 
   if (Object.keys(localErrors).length > 0) {
     showModalErrors(localErrors);
@@ -236,7 +252,13 @@ async function saveItem(id = null) {
   try {
     let result;
     if (id) {
-      result = await updateItem(id, name, category_id, safety_stock, selling_price);
+      result = await updateItem(
+        id,
+        name,
+        category_id,
+        safety_stock,
+        selling_price,
+      );
     } else {
       result = await createItem(name, category_id, safety_stock, selling_price);
     }
@@ -263,6 +285,7 @@ async function removeItem(id) {
 
   try {
     const result = await deleteItem(id);
+    
 
     if (result && result.status === "success") {
       alert(result.message || "Item deleted successfully.");
@@ -284,16 +307,17 @@ async function openItemModal({ title, item = null }) {
     await loadCategories();
   }
 
-  const categoryOptions = categoriesList.length > 0
-    ? categoriesList
-        .map(
-          (cat) =>
-            `<option value="${cat.id}" ${item && Number(item.category_id) === Number(cat.id) ? "selected" : ""}>
+  const categoryOptions =
+    categoriesList.length > 0
+      ? categoriesList
+          .map(
+            (cat) =>
+              `<option value="${cat.id}" ${item && Number(item.category_id) === Number(cat.id) ? "selected" : ""}>
                ${cat.name}
-             </option>`
-        )
-        .join("")
-    : `<option value="" disabled>No categories available</option>`;
+             </option>`,
+          )
+          .join("")
+      : `<option value="" disabled>No categories available</option>`;
 
   openModal({
     titleText: title,
@@ -384,7 +408,9 @@ async function openItemModal({ title, item = null }) {
     `,
   });
 
-  document.getElementById("cancelModalBtn").addEventListener("click", closeModal);
+  document
+    .getElementById("cancelModalBtn")
+    .addEventListener("click", closeModal);
   document.getElementById("saveItemBtn").addEventListener("click", () => {
     saveItem(item ? item.id : null);
   });
