@@ -24,6 +24,7 @@ function validateItemInput($mydb, $userId, $data, $currentItemId = null)
 {
     $name = trim($data['name'] ?? '');
     $categoryId = (int) ($data['category_id'] ?? 0);
+    $supplierId = (int) ($data['supplier_id'] ?? 0);
     $safetyStock = $data['safety_stock'] ?? null;
     $sellingPrice = $data['selling_price'] ?? null;
 
@@ -57,6 +58,19 @@ function validateItemInput($mydb, $userId, $data, $currentItemId = null)
         }
     }
 
+    // 2. Supplier validation
+    if ($supplierId <= 0) {
+        $errors['supplier_id'] = 'Please select a valid supplier.';
+    } else {
+        $mydb->select('suppliers', 'id', [
+            'id' => $supplierId,
+            'user_id' => $userId
+        ]);
+        if (!$mydb->res || !$mydb->res->fetch_assoc()) {
+            $errors['supplier_id'] = 'Selected supplier does not exist.';
+        }
+    }
+
     // 3. Safety Stock validation
     if ($safetyStock === null || $safetyStock === '' || !is_numeric($safetyStock) || (int) $safetyStock < 0) {
         $errors['safety_stock'] = 'Safety stock must be a non-negative number.';
@@ -73,6 +87,7 @@ function validateItemInput($mydb, $userId, $data, $currentItemId = null)
         'data' => [
             'name' => $name,
             'category_id' => $categoryId,
+            'supplier_id' => $supplierId,
             'safety_stock' => (int) $safetyStock,
             'selling_price' => (float) $sellingPrice
         ]
@@ -104,12 +119,17 @@ switch ($method) {
             exit;
         }
 
+
         $stmt = $mydb->conn->prepare(
-            "SELECT i.*, c.name AS category_name 
-             FROM items i
-             LEFT JOIN categories c ON c.id = i.category_id
-             WHERE i.user_id = ? AND i.deleted_at IS NULL
-             ORDER BY i.name ASC"
+            "SELECT
+                i.*,
+                c.name AS category_name,
+                s.name AS supplier_name
+            FROM items i
+            LEFT JOIN categories c ON c.id = i.category_id
+            LEFT JOIN suppliers s ON s.id = i.supplier_id
+            WHERE i.user_id = ? AND i.deleted_at IS NULL
+            ORDER BY i.name ASC"
         );
         $stmt->bind_param('i', $userId);
         $stmt->execute();
@@ -128,7 +148,6 @@ switch ($method) {
         $validation = validateItemInput($mydb, $userId, $input);
 
         if (!$validation['isValid']) {
-            http_response_code(422);
             echo json_encode([
                 'status' => 'error',
                 'errors' => $validation['errors']
@@ -141,13 +160,13 @@ switch ($method) {
         $id = $mydb->insert('items', [
             'user_id' => $userId,
             'category_id' => $validData['category_id'],
+            'supplier_id' => $validData['supplier_id'],
             'name' => $validData['name'],
             'stock' => 0, // Starts at 0 until recorded via purchases
             'safety_stock' => $validData['safety_stock'],
             'selling_price' => $validData['selling_price']
         ]);
 
-        http_response_code(201);
         echo json_encode([
             'status' => 'success',
             'message' => 'Item created successfully.',
@@ -193,6 +212,7 @@ switch ($method) {
             [
                 'name' => $validData['name'],
                 'category_id' => $validData['category_id'],
+                'supplier_id' => $validData['supplier_id'],
                 'safety_stock' => $validData['safety_stock'],
                 'selling_price' => $validData['selling_price']
             ],

@@ -108,6 +108,8 @@ if (!isset($_SESSION['user_id'])) {
                                 <!-- Column 2 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-left">CATEGORY</th>
 
+                                <th class="py-3.5 px-4 sm:px-6 text-left">SUPPLIER</th>
+
                                 <!-- Column 3 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-left cursor-pointer hover:text-gray-800 transition">
                                     <div class="flex items-center space-x-1">

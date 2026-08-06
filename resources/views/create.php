@@ -118,7 +118,7 @@
 
     <!-- Bottom Footer Navigation -->
     <?php require_once "partials/footer.php" ?>
-    <script type="module" src="../js/auth.js"></script>
+    <script type="module" src="../js/authController.js"></script>
 
 </body>
 

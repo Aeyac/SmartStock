@@ -19,6 +19,12 @@
                 <span>Dashboard</span>
             </a>
 
+            <a id="categoriesNav" href="./categories.php"
+                class="flex items-center space-x-3 px-4 py-3 text-gray-600 rounded-lg hover:bg-gray-50 font-medium text-sm transition">
+                <i data-lucide="layers" class="w-4 h-4"></i>
+                <span>Categories</span>
+            </a>
+
             <a id="inventoryNav" href="./items.php"
                 class="flex items-center space-x-3 px-4 py-3 text-gray-600 rounded-lg hover:bg-gray-50 font-medium text-sm transition">
                 <i data-lucide="check-square" class="w-5 h-5"></i>
@@ -44,7 +50,17 @@
             </a>
         </nav>
     </div>
+
+    <!-- Pinned Footer Section for Log Out -->
+    <div class="p-4 border-t border-gray-100">
+        <a id="logoutNav" href="./logout.php"
+            class="flex items-center space-x-3 px-4 py-3 bg-red-50/50 text-red-600 rounded-lg hover:bg-red-100 hover:text-red-700 font-semibold text-sm transition duration-150">
+            <i data-lucide="log-out" class="w-5 h-5"></i>
+            <span>Log Out</span>
+        </a>
+    </div>
 </aside>
+
 
 <script>
     // Get the current page file name from the URL path
@@ -53,6 +69,7 @@
     // Map your PHP file names to the corresponding navigation link IDs
     const navMapping = {
         'dashboard.php': 'dashboardNav',
+        'categories.php': 'categoriesNav',
         'items.php': 'inventoryNav',
         'suppliers.php': 'supplierNav',
         'purchases.php': 'purchasesNav',

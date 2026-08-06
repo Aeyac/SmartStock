@@ -5,6 +5,7 @@ import {
   deleteItem,
 } from "./api/itemsApi.js";
 import { fetchCategories } from "./api/categoriesApi.js";
+
 import {
   openModal,
   closeModal,
@@ -12,11 +13,14 @@ import {
   clearModalErrors,
 } from "./modalController.js";
 
+import { fetchSuppliers } from "./api/suppliersApi.js";
+
 console.log("Items controller loaded");
 
 // State
 let allItems = [];
 let categoriesList = [];
+let suppliersList = [];
 let currentSearch = "";
 let currentFilter = "all"; // 'all' or 'low_stock'
 
@@ -31,7 +35,7 @@ function refreshIcons() {
 // Load Categories & Items
 // ======================
 async function init() {
-  await Promise.all([loadCategories(), loadItems()]);
+  await Promise.all([loadCategories(), loadItems(), loadSuppliers()]);
   setupEventListeners();
   refreshIcons();
 }
@@ -47,11 +51,22 @@ async function loadCategories() {
   }
 }
 
+async function loadSuppliers() {
+  try {
+    const result = await fetchSuppliers();
+    if (result && result.status === "success") {
+      suppliersList = result.suppliers || result.data || [];
+    }
+  } catch (error) {
+    console.error("Error loading suppliers:", error);
+  }
+}
+
 async function loadItems() {
   try {
     const result = await fetchItems();
 
-    console.log(result)
+    console.log(result);
     const totalEl = document.getElementById("totalItems");
     const lowStockEl = document.getElementById("totalLowStock");
 
@@ -85,7 +100,8 @@ function applyFilters() {
     const matchesSearch =
       term === "" ||
       item.name.toLowerCase().includes(term) ||
-      (item.category_name && item.category_name.toLowerCase().includes(term));
+      (item.category_name && item.category_name.toLowerCase().includes(term)) ||
+      (item.supplier_name && item.supplier_name.toLowerCase().includes(term));
 
     const matchesFilter =
       currentFilter === "all" ||
@@ -146,6 +162,9 @@ function renderItems(items) {
       </td>
       <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
         ${item.category_name || "Uncategorized"}
+      </td>
+      <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
+        ${item.supplier_name || "N/A"}
       </td>
       <td class="py-3.5 px-4 sm:px-6 text-left">${stockBadge}</td>
       <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
@@ -231,6 +250,7 @@ async function saveItem(id = null) {
 
   const name = document.getElementById("itemName").value.trim();
   const category_id = document.getElementById("itemCategory").value;
+  const supplier_id = document.getElementById("itemSupplier").value;
   const safety_stock = document.getElementById("itemSafetyStock").value.trim();
   const selling_price = document
     .getElementById("itemSellingPrice")
@@ -239,6 +259,7 @@ async function saveItem(id = null) {
   const localErrors = {};
   if (!name) localErrors["name"] = "Item name is required.";
   if (!category_id) localErrors["category_id"] = "Please select a category.";
+  if (!supplier_id) localErrors["supplier_id"] = "Please select a supplier.";
   if (safety_stock === "")
     localErrors["safety_stock"] = "Safety stock is required.";
   if (selling_price === "")
@@ -256,11 +277,18 @@ async function saveItem(id = null) {
         id,
         name,
         category_id,
+        supplier_id,
         safety_stock,
         selling_price,
       );
     } else {
-      result = await createItem(name, category_id, safety_stock, selling_price);
+      result = await createItem(
+        name,
+        category_id,
+        supplier_id,
+        safety_stock,
+        selling_price,
+      );
     }
 
     if (result && result.status === "error") {
@@ -285,7 +313,6 @@ async function removeItem(id) {
 
   try {
     const result = await deleteItem(id);
-    
 
     if (result && result.status === "success") {
       alert(result.message || "Item deleted successfully.");
@@ -317,7 +344,19 @@ async function openItemModal({ title, item = null }) {
              </option>`,
           )
           .join("")
-      : `<option value="" disabled>No categories available</option>`;
+      : `<option value="" disabled>No categories available.</option>`;
+
+  const supplierOptions =
+    suppliersList.length > 0
+      ? suppliersList
+          .map(
+            (sup) =>
+              `<option value="${sup.id}" ${item && Number(item.supplier_id) === Number(sup.id) ? "selected" : ""}>
+               ${sup.name}
+             </option>`,
+          )
+          .join("")
+      : `<option value="" disabled>No suppliers available</option>`;
 
   openModal({
     titleText: title,
@@ -351,6 +390,21 @@ async function openItemModal({ title, item = null }) {
             ${categoryOptions}
           </select>
           <p class="error-msg text-xs text-rose-500 font-medium mt-1 hidden" id="error-category_id"></p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+            Supplier <span class="text-red-500">*</span>
+          </label>
+          <select
+            id="itemSupplier"
+            name="supplier_id"
+            class="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 bg-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
+          >
+            <option value="">Select Supplier</option>
+            ${supplierOptions}
+          </select>
+          <p class="error-msg text-xs text-rose-500 font-medium mt-1 hidden" id="error-supplier_id"></p>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
