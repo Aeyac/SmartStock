@@ -14,7 +14,7 @@ if (!isset($_SESSION['user_id'])) {
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SmartStock - Items</title>
+    <title>SmartStock - Stock Ledger</title>
 
     <link rel="stylesheet" href="../../src/output.css" />
 
@@ -35,13 +35,13 @@ if (!isset($_SESSION['user_id'])) {
             <!-- Title & Action Section -->
             <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Items Catalog</h1>
-                    <p class="text-xs sm:text-sm text-gray-500 mt-1">Manage your inventory products, safety stocks, and
-                        pricing</p>
+                    <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Stock Ledger</h1>
+                    <p class="text-xs sm:text-sm text-gray-500 mt-1">Maintain a complete audit trail of incoming and
+                        outgoing inventory movements.</p>
                 </div>
 
                 <!-- Controls: Stat Counter + Primary Button -->
-                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+                <!-- <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
                     <div
                         class="flex justify-around bg-white border border-gray-200 rounded-xl px-4 py-2 divide-x divide-gray-200 shadow-sm">
                         <div class="pr-4 sm:pr-6 text-center sm:text-left">
@@ -61,7 +61,7 @@ if (!isset($_SESSION['user_id'])) {
                         <i data-lucide="plus" class="w-4 h-4"></i>
                         <span>Add Item</span>
                     </button>
-                </div>
+                </div> -->
             </div>
 
             <!-- Table Container Card -->
@@ -80,12 +80,11 @@ if (!isset($_SESSION['user_id'])) {
                     <div class="flex items-center justify-between sm:justify-end space-x-2">
                         <div
                             class="inline-flex bg-gray-100 p-1 rounded-lg text-xs font-semibold text-gray-600 flex-1 sm:flex-initial justify-between">
-                            <button id="allButton"
-                                class="px-3 py-1.5 rounded-md bg-white text-gray-900 shadow-sm flex-1 sm:flex-none text-center cursor-pointer">All
-                                Items</button>
-                            <button id="lowStockBtn"
-                                class="px-3 py-1.5 rounded-md hover:text-gray-900 transition flex-1 sm:flex-none text-center cursor-pointer">Low
-                                Stock</button>
+                            <button id="purchasesBtn"
+                                class="px-3 py-1.5 rounded-md bg-white text-gray-900 shadow-sm flex-1 sm:flex-none text-center cursor-pointer">
+                                Purchases</button>
+                            <button id="salesBtn"
+                                class="px-3 py-1.5 rounded-md hover:text-gray-900 transition flex-1 sm:flex-none text-center cursor-pointer">Sales</button>
                         </div>
                     </div>
                 </div>
@@ -100,26 +99,20 @@ if (!isset($_SESSION['user_id'])) {
                                 <!-- Column 1 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-left cursor-pointer hover:text-gray-800 transition">
                                     <div class="flex items-center space-x-1">
-                                        <span>ITEM NAME</span>
+                                        <span>TRANSACTION ID</span>
                                         <i data-lucide="arrow-up-down" class="w-3 h-3 text-gray-400"></i>
                                     </div>
                                 </th>
 
                                 <!-- Column 2 Header -->
-                                <th class="py-3.5 px-4 sm:px-6 text-left">CATEGORY</th>
+                                <th class="py-3.5 px-4 sm:px-6 text-left">MOVEMENT TYPE</th>
 
-                                <th class="py-3.5 px-4 sm:px-6 text-left">SUPPLIER</th>
+                                <th class="py-3.5 px-4 sm:px-6 text-left">REFERENCE ID</th>
 
-                                <!-- Column 3 Header -->
-                                <th class="py-3.5 px-4 sm:px-6 text-left cursor-pointer hover:text-gray-800 transition">
-                                    <div class="flex items-center space-x-1">
-                                        <span>STOCK LEVEL</span>
-                                        <i data-lucide="arrow-up-down" class="w-3 h-3 text-gray-400"></i>
-                                    </div>
-                                </th>
+                                <th class="py-3.5 px-4 sm:px-6 text-left">ITEM NAME</th>
 
                                 <!-- Column 4 Header -->
-                                <th class="py-3.5 px-4 sm:px-6 text-left">SAFETY STOCK</th>
+                                <th class="py-3.5 px-4 sm:px-6 text-left">QUANTITY CHANGE</th>
 
                                 <!-- Column 5 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-left">SELLING PRICE</th>

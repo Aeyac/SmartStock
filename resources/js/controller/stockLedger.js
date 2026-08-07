@@ -1,4 +1,4 @@
-import { apiRequest } from "../fetchApi.js";
+import { apiRequest } from "../../fetchApi.js";
 const BASE_URL = "/smart_stock/endpoints/StockLedger.php";
 
 export function fetchStockLedger(itemId) {

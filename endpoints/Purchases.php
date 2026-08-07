@@ -1,8 +1,8 @@
 <?php
+session_start();
 
 require_once "../db.php";
 
-session_start();
 header('Content-Type: application/json; charset=utf-8');
 
 if (!isset($_SESSION['user_id'])) {
@@ -14,6 +14,55 @@ if (!isset($_SESSION['user_id'])) {
 $userId = $_SESSION['user_id'];
 $mydb = new myDB();
 $method = $_SERVER['REQUEST_METHOD'];
+
+function validatePurchaseInput($mydb, $userId, $data)
+{
+    $supplierId = (int) ($data['supplier_id'] ?? 0);
+    $purchaseDate = trim($data['purchase_date'] ?? '');
+    $items = $data['items'] ?? [];
+
+    $errors = [];
+
+    $mydb->select('suppliers', 'id', ['id' => $supplierId, 'user_id' => $userId]);
+    if (!$mydb->res || !$mydb->res->fetch_assoc()) {
+        $errors['supplier_id'] = 'A valid supplier is required.';
+    }
+
+    if ($purchaseDate === '' || !strtotime($purchaseDate)) {
+        $errors['purchase_date'] = 'A valid purchase date is required.';
+    }
+
+    if (empty($items) || !is_array($items)) {
+        $errors['items'] = 'At least one item is required.';
+    } else {
+        foreach ($items as $index => $line) {
+            $itemId = (int) ($line['item_id'] ?? 0);
+            $quantity = $line['quantity'] ?? null;
+            $unitCost = $line['unit_cost'] ?? null;
+
+            $mydb->select('items', 'id', ['id' => $itemId, 'user_id' => $userId]);
+            if (!$mydb->res || !$mydb->res->fetch_assoc()) {
+                $errors["items.$index.item_id"] = 'Invalid selected item.';
+            }
+            if (!is_numeric($quantity) || $quantity <= 0) {
+                $errors["items.$index.quantity"] = 'Quantity must be greater than zero.';
+            }
+            if (!is_numeric($unitCost) || $unitCost < 0) {
+                $errors["items.$index.unit_cost"] = 'Unit cost must be zero or greater.';
+            }
+        }
+    }
+
+    return [
+        'isValid' => empty($errors),
+        'errors' => $errors,
+        'data' => [
+            'supplier_id' => $supplierId,
+            'purchase_date' => $purchaseDate,
+            'items' => $items,
+        ]
+    ];
+}
 
 switch ($method) {
 
@@ -54,6 +103,7 @@ switch ($method) {
              WHERE p.user_id = ?
              ORDER BY p.purchase_date DESC"
         );
+
         $stmt->bind_param('i', $userId);
         $stmt->execute();
         $purchases = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -67,50 +117,17 @@ switch ($method) {
     // POST - Record Purchase (header + line items + stock + ledger, all-or-nothing)
 
     case 'POST':
-
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
+        $validation = validatePurchaseInput($mydb, $userId, $data);
 
-        $supplierId = (int) ($data['supplier_id'] ?? 0);
-        $purchaseDate = $data['purchase_date'] ?? '';
-        $items = $data['items'] ?? [];
-
-        $errors = [];
-
-        $mydb->select('suppliers', 'id', ['id' => $supplierId, 'user_id' => $userId]);
-        if (!$mydb->res || !$mydb->res->fetch_assoc()) {
-            $errors['supplier_id'] = 'A valid supplier is required.';
-        }
-
-        if ($purchaseDate === '' || !strtotime($purchaseDate)) {
-            $errors['purchase_date'] = 'A valid purchase date is required.';
-        }
-
-        if (empty($items) || !is_array($items)) {
-            $errors['items'] = 'At least one item is required.';
-        } else {
-            foreach ($items as $index => $line) {
-                $itemId = (int) ($line['item_id'] ?? 0);
-                $quantity = $line['quantity'] ?? null;
-                $unitCost = $line['unit_cost'] ?? null;
-
-                $mydb->select('items', 'id', ['id' => $itemId, 'user_id' => $userId]);
-                if (!$mydb->res || !$mydb->res->fetch_assoc()) {
-                    $errors["items.$index.item_id"] = 'Invalid item selected.';
-                }
-                if (!is_numeric($quantity) || $quantity <= 0) {
-                    $errors["items.$index.quantity"] = 'Quantity must be greater than zero.';
-                }
-                if (!is_numeric($unitCost) || $unitCost < 0) {
-                    $errors["items.$index.unit_cost"] = 'Unit cost must be zero or greater.';
-                }
-            }
-        }
-
-        if (!empty($errors)) {
-            http_response_code(422);
-            echo json_encode(['status' => 'error', 'errors' => $errors]);
+        if (!$validation['isValid']) {
+            echo json_encode(['status' => 'error', 'errors' => $validation['errors']]);
             exit;
         }
+
+        $supplierId = $validation['data']['supplier_id'];
+        $purchaseDate = $validation['data']['purchase_date'];
+        $items = $validation['data']['items'];
 
         $mydb->conn->begin_transaction();
 
@@ -162,7 +179,6 @@ switch ($method) {
 
             $mydb->conn->commit();
 
-            http_response_code(201);
             echo json_encode([
                 'status' => 'success',
                 'message' => 'Purchase recorded successfully.',
@@ -171,8 +187,6 @@ switch ($method) {
         } catch (Throwable $e) {
             $mydb->conn->rollback();
             error_log('Purchase Error: ' . $e->getMessage());
-
-            http_response_code(500);
             echo json_encode(['status' => 'error', 'message' => 'Could not record purchase.']);
         }
         break;
@@ -180,7 +194,6 @@ switch ($method) {
 
 
     default:
-
         http_response_code(405);
         echo json_encode(['status' => 'error', 'message' => 'Method Not Allowed.']);
 }

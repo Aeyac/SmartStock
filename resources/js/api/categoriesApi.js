@@ -13,3 +13,21 @@ export function createCategory(name) {
     }),
   });
 }
+
+export function updateCategory(id, name) {
+  return apiRequest(`${BASE_URL}?id=${id}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      name,
+    }),
+  });
+}
+
+export function deleteCategory(id) {
+  return apiRequest(BASE_URL, {
+    method: "DELETE",
+    body: JSON.stringify({
+      id,
+    }),
+  });
+}

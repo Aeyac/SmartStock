@@ -3,7 +3,7 @@ import {
   createSupplier,
   updateSupplier,
   deleteSupplier,
-} from "./api/suppliersApi.js";
+} from "../api/suppliersApi.js";
 
 // Save (Create or Update) Handler
 import {

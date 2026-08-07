@@ -3,8 +3,8 @@ import {
   createItem,
   updateItem,
   deleteItem,
-} from "./api/itemsApi.js";
-import { fetchCategories } from "./api/categoriesApi.js";
+} from "../api/itemsApi.js";
+import { fetchCategories } from "../api/categoriesApi.js";
 
 import {
   openModal,
@@ -13,7 +13,7 @@ import {
   clearModalErrors,
 } from "./modalController.js";
 
-import { fetchSuppliers } from "./api/suppliersApi.js";
+import { fetchSuppliers } from "../api/suppliersApi.js";
 
 console.log("Items controller loaded");
 

@@ -53,7 +53,7 @@ if (!isset($_SESSION['user_id'])) {
                         <div class="pl-4 sm:pl-6 text-center sm:text-left">
                             <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">ACTIVE
                                 SUPPLIERS</span>
-                            <span id="totalActive" class="text-base sm:text-lg font-bold text-emerald-700">14</span>
+                            <span id="totalActive" class="text-base sm:text-lg font-bold text-emerald-700">0</span>
                         </div>
                     </div>
 
@@ -100,40 +100,25 @@ if (!isset($_SESSION['user_id'])) {
                 <div class="max-h-[500px] overflow-y-auto overflow-x-auto">
                     <table id="suppliersTable" class="w-full min-w-[700px] border-collapse">
                         <thead class="sticky top-0 bg-gray-50 z-10">
-                            <tr
-                                class="bg-gray-50 border-b border-gray-200 text-[11px] font-bold tracking-wider text-gray-500 uppercase select-none">
-
-                                <!-- Column 1 Header -->
+                            <tr class="bg-gray-50 border-b border-gray-200 text-[11px] font-bold tracking-wider text-gray-500 uppercase select-none">
                                 <th class="py-3.5 px-4 sm:px-6 text-left cursor-pointer hover:text-gray-800 transition">
                                     <div class="flex items-center space-x-1">
                                         <span>SUPPLIER NAME</span>
                                         <i data-lucide="arrow-up-down" class="w-3 h-3 text-gray-400"></i>
                                     </div>
                                 </th>
-
-                                <!-- Column 2 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-left">CONTACT NUMBER</th>
-
-                                <!-- Column 3 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-left">EMAIL ADDRESS</th>
-
-                                <!-- Column 4 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-left cursor-pointer hover:text-gray-800 transition">
                                     <div class="flex items-center space-x-1">
                                         <span>STATUS</span>
                                         <i data-lucide="arrow-up-down" class="w-3 h-3 text-gray-400"></i>
                                     </div>
                                 </th>
-
-                                <!-- Column 5 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-right">ACTIONS</th>
                             </tr>
                         </thead>
                         <tbody id="suppliersTableBody" class="divide-y divide-gray-100 text-xs sm:text-sm">
-
-                            <!-- Row 1 -->
-
-
                         </tbody>
                     </table>
                 </div>
@@ -164,7 +149,8 @@ if (!isset($_SESSION['user_id'])) {
         </main>
     </div>
 
-    <script type="module" src="../js/suppliersController.js"></script>
+    <script type="module" src="../js/controller/suppliersController.js"></script>
+    
 
 
 </body>

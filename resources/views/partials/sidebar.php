@@ -48,6 +48,12 @@
                 <i data-lucide="tag" class="w-5 h-5"></i>
                 <span>Sales</span>
             </a>
+
+            <a id="stockledgerNav" href="./stockledger.php"
+                class="flex items-center space-x-3 px-4 py-3 text-gray-600 rounded-lg hover:bg-gray-50 font-medium text-sm transition">
+                <i data-lucide="book-open" class="w-5 h-5"></i>
+                <span>Stock Ledger</span>
+            </a>
         </nav>
     </div>
 
@@ -73,7 +79,8 @@
         'items.php': 'inventoryNav',
         'suppliers.php': 'supplierNav',
         'purchases.php': 'purchasesNav',
-        'sales.php': 'salesrNav' // Matches your id="salesrNav"
+        'sales.php': 'salesrNav',
+        'stockledger.php': 'stockledgerNav'
     };
 
     // Get the ID of the link that should be active
