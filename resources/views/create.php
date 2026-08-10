@@ -83,19 +83,6 @@
                     </div>
                 </div> -->
 
-                <!-- Terms and Conditions Checkbox -->
-                <div class="flex items-start gap-2.5 pt-1">
-                    <input
-                        class="mt-0.5 w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 accent-slate-900 cursor-pointer"
-                        id="terms" name="terms" required type="checkbox" />
-                    <label class="text-xs font-medium text-slate-600 leading-tight cursor-pointer select-none"
-                        for="terms">
-                        I agree to the <a href="#" class="text-slate-900 font-semibold hover:underline">Terms of
-                            Service</a> and <a href="#" class="text-slate-900 font-semibold hover:underline">Privacy
-                            Policy</a>
-                    </label>
-                </div>
-
                 <!-- Submit Button -->
                 <button
                     class="mt-2 w-full py-2.5 bg-slate-900 hover:bg-slate-800 active:bg-black text-white font-semibold text-sm rounded-lg shadow-sm transition-all duration-150 flex items-center justify-center gap-2"

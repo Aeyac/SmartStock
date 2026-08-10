@@ -6,26 +6,26 @@ export function fetchItems(lowStock = false) {
   return apiRequest(url, { method: "GET" });
 }
 
-export function createItem(name, category_id, supplier_id, safety_stock, selling_price) {
+export function createItem(name, category_id, safety_stock, selling_price) {
   return apiRequest(BASE_URL, {
     method: "POST",
     body: JSON.stringify({
       name,
       category_id: Number(category_id),
-      supplier_id: Number(supplier_id),
+      // supplier_id: Number(supplier_id),
       safety_stock: Number(safety_stock),
       selling_price: Number(selling_price),
     }),
   });
 }
 
-export function updateItem(id, name, category_id, supplier_id, safety_stock, selling_price) {
+export function updateItem(id, name, category_id, safety_stock, selling_price) {
   return apiRequest(`${BASE_URL}?id=${id}`, {
     method: "PUT",
     body: JSON.stringify({
       name,
       category_id: Number(category_id),
-      supplier_id: Number(supplier_id),
+      // supplier_id: Number(supplier_id),
       safety_stock: Number(safety_stock),
       selling_price: Number(selling_price),
     }),

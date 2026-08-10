@@ -5,6 +5,11 @@ export function fetchCategories() {
   return apiRequest(BASE_URL, { method: "GET" });
 }
 
+// Archived (soft-deleted) categories — for a "restore from archive" view.
+export function fetchArchivedCategories() {
+  return apiRequest(`${BASE_URL}?archived=1`, { method: "GET" });
+}
+
 export function createCategory(name) {
   return apiRequest(BASE_URL, {
     method: "POST",
@@ -23,11 +28,17 @@ export function updateCategory(id, name) {
   });
 }
 
+// Archives (soft deletes) a category — id goes in the query string, since
+// the endpoint reads $_GET['id'] for this action, not the request body.
 export function deleteCategory(id) {
-  return apiRequest(BASE_URL, {
+  return apiRequest(`${BASE_URL}?id=${id}`, {
     method: "DELETE",
-    body: JSON.stringify({
-      id,
-    }),
+  });
+}
+
+// Restores a previously archived category (clears deleted_at).
+export function restoreCategory(id) {
+  return apiRequest(`${BASE_URL}?id=${id}`, {
+    method: "PATCH",
   });
 }

@@ -9,8 +9,6 @@ $mydb = new myDB();
 $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
-
-    // POST - Register or Login (?type=register / ?type=login)
     case 'POST':
 
         $type = $_GET['type'] ?? '';
@@ -99,21 +97,15 @@ switch ($method) {
 
 
 
-    // DELETE - Logout (destroys the current session)
 
     case 'DELETE':
-
         $_SESSION = [];
         session_destroy();
-
-        http_response_code(200);
         echo json_encode(['status' => 'success', 'message' => 'Logged out successfully.']);
         break;
 
 
 
     default:
-
-        http_response_code(405);
         echo json_encode(['status' => 'error', 'message' => 'Method Not Allowed.']);
 }

@@ -41,8 +41,8 @@ if (!isset($_SESSION['user_id'])) {
                 </div>
 
                 <!-- Controls: Stat Counter + Primary Button -->
-                <!-- <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-                    <div
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+                    <!-- <div
                         class="flex justify-around bg-white border border-gray-200 rounded-xl px-4 py-2 divide-x divide-gray-200 shadow-sm">
                         <div class="pr-4 sm:pr-6 text-center sm:text-left">
                             <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">TOTAL
@@ -54,14 +54,14 @@ if (!isset($_SESSION['user_id'])) {
                                 ALERTS</span>
                             <span id="totalLowStock" class="text-base sm:text-lg font-bold text-amber-600">0</span>
                         </div>
-                    </div>
+                    </div> -->
 
                     <button id="addBtn"
                         class="bg-black text-white px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center space-x-2 hover:bg-gray-800 transition shadow-sm active:scale-95 cursor-pointer">
                         <i data-lucide="plus" class="w-4 h-4"></i>
-                        <span>Add Item</span>
+                        <span>Add Adjustment</span>
                     </button>
-                </div> -->
+                </div>
             </div>
 
             <!-- Table Container Card -->
@@ -80,11 +80,21 @@ if (!isset($_SESSION['user_id'])) {
                     <div class="flex items-center justify-between sm:justify-end space-x-2">
                         <div
                             class="inline-flex bg-gray-100 p-1 rounded-lg text-xs font-semibold text-gray-600 flex-1 sm:flex-initial justify-between">
+                            <button id="allButton"
+                                class="px-3 py-1.5 rounded-md bg-white text-gray-900 shadow-sm flex-1 sm:flex-none text-center cursor-pointer">All
+                            </button>
                             <button id="purchasesBtn"
-                                class="px-3 py-1.5 rounded-md bg-white text-gray-900 shadow-sm flex-1 sm:flex-none text-center cursor-pointer">
-                                Purchases</button>
+                                class="px-3 py-1.5 rounded-md hover:text-gray-900 transition flex-1 sm:flex-none text-center cursor-pointer">
+                                Purchases
+                            </button>
                             <button id="salesBtn"
-                                class="px-3 py-1.5 rounded-md hover:text-gray-900 transition flex-1 sm:flex-none text-center cursor-pointer">Sales</button>
+                                class="px-3 py-1.5 rounded-md hover:text-gray-900 transition flex-1 sm:flex-none text-center cursor-pointer">
+                                Sales
+                            </button>
+                            <button id="adjustmentBtn"
+                                class="px-3 py-1.5 rounded-md hover:text-gray-900 transition flex-1 sm:flex-none text-center cursor-pointer">
+                                Adjustment
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -107,7 +117,7 @@ if (!isset($_SESSION['user_id'])) {
                                 <!-- Column 2 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-left">MOVEMENT TYPE</th>
 
-                                <th class="py-3.5 px-4 sm:px-6 text-left">REFERENCE ID</th>
+                                <!-- <th class="py-3.5 px-4 sm:px-6 text-left">REFERENCE ID</th> -->
 
                                 <th class="py-3.5 px-4 sm:px-6 text-left">ITEM NAME</th>
 
@@ -115,10 +125,9 @@ if (!isset($_SESSION['user_id'])) {
                                 <th class="py-3.5 px-4 sm:px-6 text-left">QUANTITY CHANGE</th>
 
                                 <!-- Column 5 Header -->
-                                <th class="py-3.5 px-4 sm:px-6 text-left">SELLING PRICE</th>
+                                <th class="py-3.5 px-4 sm:px-6 text-left">STOCK AFTER</th>
 
                                 <!-- Column 6 Header -->
-                                <th class="py-3.5 px-4 sm:px-6 text-right">ACTIONS</th>
                             </tr>
                         </thead>
                         <tbody id="itemsTableBody" class="divide-y divide-gray-100 text-xs sm:text-sm">
@@ -131,18 +140,10 @@ if (!isset($_SESSION['user_id'])) {
                 <div
                     class="p-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500 font-medium">
                     <div>
-                        Showing <span id="showingCount" class="font-semibold text-gray-900">0</span> items
-                    </div>
-                    <div class="flex items-center space-x-1">
-                        <button
-                            class="px-3 py-1.5 border border-gray-200 rounded-lg bg-white hover:bg-gray-100 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                            disabled>
-                            Previous
-                        </button>
-                        <button
-                            class="px-3 py-1.5 border border-gray-200 rounded-lg bg-white hover:bg-gray-100 text-gray-700 transition cursor-pointer">
-                            Next
-                        </button>
+                        Showing <span id="showingCount" class="font-semibold text-gray-900">0</span>
+                        out of
+                        <span id="totalCount" class="font-semibold text-gray-900"></span>
+                        ledgers
                     </div>
                 </div>
 
@@ -151,7 +152,7 @@ if (!isset($_SESSION['user_id'])) {
         </main>
     </div>
 
-    <script type="module" src="../js/controller/itemsController.js"></script>
+    <script type="module" src="../js/controller/stockledgerController.js"></script>
 </body>
 
 </html>

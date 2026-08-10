@@ -100,7 +100,8 @@ if (!isset($_SESSION['user_id'])) {
                 <div class="max-h-[500px] overflow-y-auto overflow-x-auto">
                     <table id="suppliersTable" class="w-full min-w-[700px] border-collapse">
                         <thead class="sticky top-0 bg-gray-50 z-10">
-                            <tr class="bg-gray-50 border-b border-gray-200 text-[11px] font-bold tracking-wider text-gray-500 uppercase select-none">
+                            <tr
+                                class="bg-gray-50 border-b border-gray-200 text-[11px] font-bold tracking-wider text-gray-500 uppercase select-none">
                                 <th class="py-3.5 px-4 sm:px-6 text-left cursor-pointer hover:text-gray-800 transition">
                                     <div class="flex items-center space-x-1">
                                         <span>SUPPLIER NAME</span>
@@ -112,7 +113,6 @@ if (!isset($_SESSION['user_id'])) {
                                 <th class="py-3.5 px-4 sm:px-6 text-left cursor-pointer hover:text-gray-800 transition">
                                     <div class="flex items-center space-x-1">
                                         <span>STATUS</span>
-                                        <i data-lucide="arrow-up-down" class="w-3 h-3 text-gray-400"></i>
                                     </div>
                                 </th>
                                 <th class="py-3.5 px-4 sm:px-6 text-right">ACTIONS</th>
@@ -127,20 +127,10 @@ if (!isset($_SESSION['user_id'])) {
                 <div
                     class="p-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500 font-medium">
                     <div>
-                        Showing <span class="font-semibold text-gray-900">1</span> to <span
-                            class="font-semibold text-gray-900">4</span> of <span
-                            class="font-semibold text-gray-900">24</span> results
-                    </div>
-                    <div class="flex items-center space-x-1">
-                        <button
-                            class="px-3 py-1.5 border border-gray-200 rounded-lg bg-white hover:bg-gray-100 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                            disabled>
-                            Previous
-                        </button>
-                        <button
-                            class="px-3 py-1.5 border border-gray-200 rounded-lg bg-white hover:bg-gray-100 text-gray-700 transition cursor-pointer">
-                            Next
-                        </button>
+                        Showing <span id="showingCount" class="font-semibold text-gray-900">0</span>
+                        out of
+                        <span id="totalCount" class="font-semibold text-gray-900"></span>
+                        suppliers
                     </div>
                 </div>
 
@@ -150,7 +140,7 @@ if (!isset($_SESSION['user_id'])) {
     </div>
 
     <script type="module" src="../js/controller/suppliersController.js"></script>
-    
+
 
 
 </body>

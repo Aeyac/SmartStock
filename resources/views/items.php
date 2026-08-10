@@ -108,7 +108,6 @@ if (!isset($_SESSION['user_id'])) {
                                 <!-- Column 2 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-left">CATEGORY</th>
 
-                                <th class="py-3.5 px-4 sm:px-6 text-left">SUPPLIER</th>
 
                                 <!-- Column 3 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-left cursor-pointer hover:text-gray-800 transition">
@@ -138,18 +137,10 @@ if (!isset($_SESSION['user_id'])) {
                 <div
                     class="p-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500 font-medium">
                     <div>
-                        Showing <span id="showingCount" class="font-semibold text-gray-900">0</span> items
-                    </div>
-                    <div class="flex items-center space-x-1">
-                        <button
-                            class="px-3 py-1.5 border border-gray-200 rounded-lg bg-white hover:bg-gray-100 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                            disabled>
-                            Previous
-                        </button>
-                        <button
-                            class="px-3 py-1.5 border border-gray-200 rounded-lg bg-white hover:bg-gray-100 text-gray-700 transition cursor-pointer">
-                            Next
-                        </button>
+                        Showing <span id="showingCount" class="font-semibold text-gray-900">0</span>
+                        out of
+                        <span id="totalCount" class="font-semibold text-gray-900"> 0 </span>
+                        items
                     </div>
                 </div>
 

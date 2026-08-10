@@ -16,6 +16,7 @@ import {
   showModalErrors,
   clearModalErrors,
 } from "./modalController.js";
+import { formatCurrency } from "../../../utils/Utility.js";
 
 console.log("loaded");
 
@@ -88,7 +89,7 @@ async function loadPurchases() {
           (acc, p) => acc + Number(p.total_amount || 0),
           0,
         );
-        totalPurchaseAmount.innerHTML = `₱${sum.toFixed(2)}`;
+        totalPurchaseAmount.innerHTML = `₱${formatCurrency(sum)}`;
       }
 
       applyFilters();
@@ -117,7 +118,7 @@ function applyFilters() {
     return matchesSearch;
   });
 
-  renderPurchases(filtered);
+  renderPurchases(filtered, allPurchases.length);
 }
 
 const searchInput = document.getElementById("searchInput");
@@ -129,11 +130,18 @@ if (searchInput) {
   });
 }
 
-function renderPurchases(purchases) {
+function renderPurchases(purchases, totalPurchasesCount = 0) {
   const tbody = document.querySelector("#purchasesTableBody");
   if (!tbody) return;
 
   tbody.innerHTML = "";
+
+  const showingCount = document.getElementById("showingCount");
+  const totalCount = document.getElementById("totalCount");
+
+  if (showingCount) showingCount.innerHTML = purchases.length;
+  if (totalCount) totalCount.innerHTML = totalPurchasesCount;
+
 
   if (purchases.length === 0) {
     tbody.innerHTML = `
@@ -173,7 +181,7 @@ function renderPurchases(purchases) {
     </td>
 
     <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
-        ₱${Number(purchase.total_amount || 0).toFixed(2)}
+        ₱${formatCurrency(purchase.total_amount)}
     </td>
 
     <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
@@ -461,7 +469,7 @@ async function viewPurchase(id) {
 
           <div class="flex items-center justify-between border-t border-slate-100 pt-3">
             <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Total Amount</span>
-            <span class="text-sm font-bold text-slate-900">₱${Number(purchase.total_amount || 0).toFixed(2)}</span>
+            <span class="text-sm font-bold text-slate-900">₱${formatCurrency(purchase.total_amount)}</span>
           </div>
         </div>
       `,

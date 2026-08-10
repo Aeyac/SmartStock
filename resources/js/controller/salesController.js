@@ -1,4 +1,5 @@
 import { fetchSales, getSale, createSale } from "../api/salesApi.js";
+import { formatCurrency } from "../../../utils/Utility.js";
 
 // NOTE: assumes itemsApi.js exports fetchItems() the same way it's used in
 // purchasesController.js, and that each item includes `selling_price` and
@@ -80,7 +81,7 @@ async function loadSales() {
           (acc, s) => acc + Number(s.total_amount || 0),
           0,
         );
-        totalSalesAmount.innerHTML = `₱${sum.toFixed(2)}`;
+        totalSalesAmount.innerHTML = `₱${formatCurrency(sum)}`;
       }
 
       applyFilters();
@@ -108,7 +109,7 @@ function applyFilters() {
     return matchesSearch;
   });
 
-  renderSales(filtered);
+  renderSales(filtered, allSales.length);
 }
 
 const searchInput = document.getElementById("searchInput");
@@ -120,7 +121,13 @@ if (searchInput) {
   });
 }
 
-function renderSales(sales) {
+function renderSales(sales, totalSaleCount = 0) {
+  const showingCount = document.getElementById("showingCount");
+  const totalCount = document.getElementById("totalCount");
+  
+  if (totalCount) totalCount.innerHTML = totalSaleCount;
+  if (showingCount) showingCount.innerHTML = sales.length;
+
   const tbody = document.querySelector("#salesTableBody");
   if (!tbody) return;
 
@@ -160,11 +167,11 @@ function renderSales(sales) {
     </td>
 
     <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
-        ₱${Number(sale.total_amount || 0).toFixed(2)}
+        ${sale.sale_date}
     </td>
 
     <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
-        ${sale.sale_date}
+        ₱${formatCurrency(sale.total_amount)}
     </td>
 
     <td class="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
@@ -336,7 +343,8 @@ function addItemRow() {
     qtyInput.max = stock;
     qtyInput.value = "";
 
-    row.querySelector(".row-price").innerHTML = `₱${price.toFixed(2)} / unit`;
+    row.querySelector(".row-price").innerHTML =
+      `₱${formatCurrency(price)} / unit`;
     updateRowSubtotal(row);
     updateGrandTotal();
   });
@@ -362,7 +370,7 @@ function updateRowSubtotal(row) {
   const quantity = Number(row.querySelector(".qty-input").value) || 0;
 
   row.querySelector(".row-subtotal").innerHTML =
-    `₱${(price * quantity).toFixed(2)}`;
+    `₱${formatCurrency(price * quantity)}`;
 }
 
 function collectItemRows() {
@@ -394,7 +402,7 @@ function updateGrandTotal() {
   });
 
   const display = document.getElementById("grandTotalDisplay");
-  if (display) display.innerHTML = `₱${grandTotal.toFixed(2)}`;
+  if (display) display.innerHTML = `₱${formatCurrency(grandTotal)}`;
 }
 
 // ======================
@@ -418,8 +426,8 @@ async function viewSale(id) {
       <tr>
         <td class="py-2 px-3 text-left text-gray-700">${item.item_name || "Item #" + item.item_id}</td>
         <td class="py-2 px-3 text-right text-gray-700">${item.quantity}</td>
-        <td class="py-2 px-3 text-right text-gray-700">₱${Number(item.unit_price || 0).toFixed(2)}</td>
-        <td class="py-2 px-3 text-right text-gray-700">₱${(Number(item.quantity || 0) * Number(item.unit_price || 0)).toFixed(2)}</td>
+        <td class="py-2 px-3 text-right text-gray-700">₱${formatCurrency(item.unit_price)}</td>
+        <td class="py-2 px-3 text-right text-gray-700">₱${formatCurrency(Number(item.quantity || 0) * Number(item.unit_price || 0))}</td>
       </tr>
     `,
       )
@@ -448,7 +456,7 @@ async function viewSale(id) {
 
           <div class="flex items-center justify-between border-t border-slate-100 pt-3">
             <span class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Total Amount</span>
-            <span class="text-sm font-bold text-slate-900">₱${Number(sale.total_amount || 0).toFixed(2)}</span>
+            <span class="text-sm font-bold text-slate-900">₱${formatCurrency(sale.total_amount)}</span>
           </div>
         </div>
       `,

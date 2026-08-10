@@ -1,8 +1,10 @@
 import {
   fetchCategories,
+  fetchArchivedCategories,
   createCategory,
   updateCategory,
   deleteCategory,
+  restoreCategory,
 } from "../api/categoriesApi.js";
 
 import {
@@ -11,7 +13,6 @@ import {
   showModalErrors,
   clearModalErrors,
 } from "./modalController.js";
-
 
 console.log("loaded");
 
@@ -37,6 +38,9 @@ async function saveCategory(id = null) {
       if (result.errors) {
         // Display validation errors returned directly from PHP
         showModalErrors(result.errors);
+      } else if (result.message) {
+        // e.g. "This category already exists." has no field to attach to
+        alert(result.message);
       }
       return;
     }
@@ -50,23 +54,40 @@ async function saveCategory(id = null) {
 }
 
 // ======================
-// Delete Supplier
+// Archive / Restore
 // ======================
-async function removeCategory(id) {
-  if (!confirm("Are you sure you want to delete this category?")) return;
+async function archiveCategory(id) {
+  if (!confirm("Archive this category? You can restore it later.")) return;
 
   try {
     const result = await deleteCategory(id);
 
     if (result.status === "success") {
-      alert(result.message || "Category deleted successfully.");
+      alert(result.message || "Category archived successfully.");
       loadCategories();
     } else {
-      alert(result.message || "Failed to delete category.");
+      alert(result.message || "Failed to archive category.");
     }
   } catch (error) {
     console.error(error);
-    alert("An error occurred while deleting.");
+    alert("An error occurred while archiving.");
+  }
+}
+
+async function restoreCategoryHandler(id) {
+  try {
+    const result = await restoreCategory(id);
+
+    if (result.status === "success") {
+      alert(result.message || "Category restored successfully.");
+      loadCategories();
+    } else {
+      // e.g. "An active category with this name already exists."
+      alert(result.message || "Failed to restore category.");
+    }
+  } catch (error) {
+    console.error(error);
+    alert("An error occurred while restoring.");
   }
 }
 
@@ -76,20 +97,24 @@ async function removeCategory(id) {
 // ======================
 // State
 // ======================
-// let currentFilter = "all";
+let currentView = "active"; // "active" | "archived"
 let allCategories = [];
 let currentSearch = "";
 
 async function loadCategories() {
   try {
-    const result = await fetchCategories();
+    const result =
+      currentView === "archived"
+        ? await fetchArchivedCategories()
+        : await fetchCategories();
+
     const totalCount = document.getElementById("totalCategories");
 
     console.log(result.categories);
 
     if (result.status === "success") {
       allCategories = result.categories;
-      totalCount.innerHTML = allCategories.length;
+      if (totalCount) totalCount.innerHTML = allCategories.length;
 
       applyFilters();
     } else {
@@ -102,7 +127,30 @@ async function loadCategories() {
 }
 
 // ======================
-// Search + Filter
+// Active / Archived Toggle
+// ======================
+const viewBtns = [
+  { el: document.getElementById("activeCategoriesBtn"), value: "active" },
+  { el: document.getElementById("archivedCategoriesBtn"), value: "archived" },
+];
+
+const activeClasses = ["bg-white", "text-gray-900", "shadow-sm"];
+
+viewBtns.forEach(({ el, value }) => {
+  if (!el) return;
+  el.addEventListener("click", () => {
+    viewBtns.forEach(
+      ({ el: btn }) => btn && btn.classList.remove(...activeClasses),
+    );
+    el.classList.add(...activeClasses);
+
+    currentView = value;
+    loadCategories();
+  });
+});
+
+// ======================
+// Search
 // ======================
 function applyFilters() {
   const term = currentSearch.trim().toLowerCase();
@@ -114,7 +162,7 @@ function applyFilters() {
     return matchesSearch;
   });
 
-  renderCategories(filtered);
+  renderCategories(filtered, allCategories.length);
 }
 
 const searchInput = document.getElementById("searchInput");
@@ -126,22 +174,31 @@ if (searchInput) {
   });
 }
 
-function renderCategories(categories) {
+function renderCategories(categories, totalCategoriesTotal = 0) {
   const tbody = document.querySelector("#categoriesTableBody");
+  const showingCount = document.getElementById("showingCount");
+  const totalCount = document.getElementById("totalCount");
+
+  if (showingCount) showingCount.innerHTML = categories.length;
+  if (totalCount) totalCount.innerHTML = totalCategoriesTotal;
+
   if (!tbody) return;
 
   tbody.innerHTML = "";
 
   if (categories.length === 0) {
+    const emptyMessage =
+      currentView === "archived"
+        ? "No archived categories."
+        : "Your categories table looks empty. Try adjusting your search.";
+
     tbody.innerHTML = `
     <tr>
       <td colspan="5" class="py-10 text-center text-gray-500">
         <div class="flex flex-col items-center gap-2">
           <i data-lucide="search-x" class="w-10 h-10 text-gray-300"></i>
           <p class="text-base font-medium">No categories found</p>
-          <p class="text-sm text-gray-400">
-            Your categories table looks empty. Try adjusting your search or filter.
-          </p>
+          <p class="text-sm text-gray-400">${emptyMessage}</p>
         </div>
       </td>
     </tr>
@@ -158,6 +215,27 @@ function renderCategories(categories) {
     const tr = document.createElement("tr");
     tr.className = "hover:bg-gray-50/80 transition group";
 
+    const dateLabel =
+      currentView === "archived"
+        ? `Archived: ${category.deleted_at?.slice(0, 10) ?? "—"}`
+        : category.created_at?.slice(0, 10);
+
+    const actionsHTML =
+      currentView === "archived"
+        ? `
+          <button title="Restore Category" class="restore-btn p-1.5 text-gray-400 hover:text-emerald-600 rounded-lg hover:bg-emerald-50 transition cursor-pointer">
+              <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+          </button>
+        `
+        : `
+          <button title="Edit Category" class="edit-btn p-1.5 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition cursor-pointer">
+              <i data-lucide="pencil" class="w-4 h-4"></i>
+          </button>
+          <button title="Archive Category" class="archive-btn p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition cursor-pointer">
+              <i data-lucide="archive" class="w-4 h-4"></i>
+          </button>
+        `;
+
     tr.innerHTML = `
     <td class="py-3.5 px-4 sm:px-6 text-left">
         <div class="font-bold text-gray-900 group-hover:text-blue-600 transition">
@@ -171,29 +249,30 @@ function renderCategories(categories) {
     </td>
 
     <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
-        ${category.created_at.slice(0, 10)}
+        ${dateLabel}
     </td>
 
     <td class="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
         <div class="flex items-center justify-end space-x-1">
-            <button title="Edit Category" class="edit-btn p-1.5 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition cursor-pointer">
-                <i data-lucide="pencil" class="w-4 h-4"></i>
-            </button>
-            <button title="Delete Category" class="delete-btn p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition cursor-pointer">
-                <i data-lucide="trash-2" class="w-4 h-4"></i>
-            </button>
+            ${actionsHTML}
         </div>
     </td>
   `;
 
     // Bind Listeners
-    tr.querySelector(".edit-btn").addEventListener("click", () => {
-      openCategoryModal({ title: "Edit Category", category });
-    });
+    if (currentView === "archived") {
+      tr.querySelector(".restore-btn").addEventListener("click", () => {
+        restoreCategoryHandler(category.id);
+      });
+    } else {
+      tr.querySelector(".edit-btn").addEventListener("click", () => {
+        openCategoryModal({ title: "Edit Category", category });
+      });
 
-    tr.querySelector(".delete-btn").addEventListener("click", () => {
-      removeCategory(category.id);
-    });
+      tr.querySelector(".archive-btn").addEventListener("click", () => {
+        archiveCategory(category.id);
+      });
+    }
 
     tbody.appendChild(tr);
   });
@@ -204,7 +283,7 @@ function renderCategories(categories) {
 }
 
 // ======================
-// Add Supplier Modal
+// Add Category Modal
 // ======================
 const addBtn = document.getElementById("addBtn");
 if (addBtn) {
@@ -213,7 +292,6 @@ if (addBtn) {
   });
 }
 
-// Helper function to build Add/Edit Modal dynamically
 // Helper function to build Add/Edit Modal dynamically
 function openCategoryModal({ title, category = null }) {
   openModal({
@@ -230,7 +308,7 @@ function openCategoryModal({ title, category = null }) {
           name="name"
           type="text"
           class="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 placeholder-slate-400 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-          placeholder="Acer Inc."
+          placeholder="Electronics"
           value="${category ? category.name : ""}"
         >
         <p class="error-msg text-xs text-rose-500 font-medium mt-1 hidden" id="error-name"></p>
@@ -252,7 +330,7 @@ function openCategoryModal({ title, category = null }) {
         type="button"
         class="inline-flex cursor-pointer items-center justify-center rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-800 active:bg-blue-800 transition focus:outline-none focus:ring-2 focus:ring-blue-500/20"
       >
-        Save Supplier
+        Save Category
       </button>
     `,
   });

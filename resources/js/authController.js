@@ -94,7 +94,7 @@ if (loginForm && !document.getElementById("name")) {
 
       console.log("Login successful:", result);
 
-      window.location.replace("./resources/views/suppliers.php");
+      window.location.replace("./resources/views/dashboard.php");
     } catch (err) {
       if (btn) {
         btn.innerHTML = originalText;
@@ -108,10 +108,10 @@ if (loginForm && !document.getElementById("name")) {
 // --- LOGOUT HANDLING ---
 const logoutBtn = document.getElementById("logoutBtn");
 if (logoutBtn) {
-  logoutBtn.addEventListener("click", async function () {
+  logoutBtn.addEventListener("click", async () => {
     try {
       await logoutUser();
-      window.location.href = "index.php";
+      window.location.href = "../../index.php";
     } catch (err) {
       alert(err.message || "Logout failed.");
     }

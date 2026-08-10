@@ -143,7 +143,7 @@ function applyFilters() {
     return matchesFilter && matchesSearch;
   });
 
-  renderSuppliers(filtered);
+  renderSuppliers(filtered, allSuppliers.length);
 }
 
 const searchInput = document.getElementById("searchInput");
@@ -179,11 +179,18 @@ filterBtns.forEach(({ el, value }) => {
   });
 });
 
-function renderSuppliers(suppliers) {
+function renderSuppliers(suppliers, totalSuppliersCount = 0) {
   const tbody = document.querySelector("#suppliersTableBody");
   if (!tbody) return;
 
   tbody.innerHTML = "";
+
+  const showingCount = document.getElementById("showingCount");
+  const totalCount = document.getElementById("totalCount");
+
+  if (totalCount) totalCount.innerHTML = totalSuppliersCount;
+  if (showingCount) showingCount.innerHTML = suppliers.length;
+
 
   if (suppliers.length === 0) {
     tbody.innerHTML = `
@@ -215,10 +222,9 @@ function renderSuppliers(suppliers) {
 
     // Dynamic Tailwind classes for Active (Green) vs Inactive (Red)
     const badgeBg = isActive
-      ? "bg-emerald-50 text-emerald-700 border-emerald-200/60"
-      : "bg-rose-50 text-rose-700 border-rose-200/60";
+      ? "text-emerald-600"
+      : "text-rose-600";
 
-    const dotBg = isActive ? "bg-emerald-500" : "bg-rose-500";
     const statusText = isActive ? "Active" : "Inactive";
 
     const tr = document.createElement("tr");
@@ -243,8 +249,7 @@ function renderSuppliers(suppliers) {
     </td>
 
     <td class="py-3.5 px-4 sm:px-6 text-left">
-       <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${badgeBg}">
-            <span class="w-1.5 h-1.5 rounded-full ${dotBg}"></span>
+       <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${badgeBg}">
             ${statusText}
         </span>
     </td>

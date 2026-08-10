@@ -13,7 +13,7 @@ import {
   clearModalErrors,
 } from "./modalController.js";
 
-import { fetchSuppliers } from "../api/suppliersApi.js";
+// import { fetchSuppliers } from "../api/suppliersApi.js";
 
 console.log("Items controller loaded");
 
@@ -35,7 +35,7 @@ function refreshIcons() {
 // Load Categories & Items
 // ======================
 async function init() {
-  await Promise.all([loadCategories(), loadItems(), loadSuppliers()]);
+  await Promise.all([loadCategories(), loadItems()]); // loadSuppliers()
   setupEventListeners();
   refreshIcons();
 }
@@ -51,16 +51,16 @@ async function loadCategories() {
   }
 }
 
-async function loadSuppliers() {
-  try {
-    const result = await fetchSuppliers();
-    if (result && result.status === "success") {
-      suppliersList = result.suppliers || result.data || [];
-    }
-  } catch (error) {
-    console.error("Error loading suppliers:", error);
-  }
-}
+// async function loadSuppliers() {
+//   try {
+//     const result = await fetchSuppliers();
+//     if (result && result.status === "success") {
+//       suppliersList = result.suppliers || result.data || [];
+//     }
+//   } catch (error) {
+//     console.error("Error loading suppliers:", error);
+//   }
+// }
 
 async function loadItems() {
   try {
@@ -100,8 +100,8 @@ function applyFilters() {
     const matchesSearch =
       term === "" ||
       item.name.toLowerCase().includes(term) ||
-      (item.category_name && item.category_name.toLowerCase().includes(term)) ||
-      (item.supplier_name && item.supplier_name.toLowerCase().includes(term));
+      (item.category_name && item.category_name.toLowerCase().includes(term)) 
+      // || (item.supplier_name && item.supplier_name.toLowerCase().includes(term));
 
     const matchesFilter =
       currentFilter === "all" ||
@@ -111,14 +111,18 @@ function applyFilters() {
     return matchesSearch && matchesFilter;
   });
 
-  renderItems(filtered);
+  renderItems(filtered, allItems.length);
 }
 
-function renderItems(items) {
+function renderItems(items, totalItemsCount = 0) {
   const tbody = document.querySelector("#itemsTableBody");
-  const showingCount = document.getElementById("showingCount");
 
-  if (showingCount) showingCount.textContent = items.length;
+  const showingCount = document.getElementById("showingCount");
+  const totalCount = document.getElementById("totalCount");
+
+  if (showingCount) showingCount.innerHTML = items.length;
+  if (totalCount) totalCount.innerHTML = totalItemsCount;
+
   if (!tbody) return;
 
   tbody.innerHTML = "";
@@ -145,10 +149,10 @@ function renderItems(items) {
     const isLowStock = currentStock <= safetyStock;
 
     const stockBadge = isLowStock
-      ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-bold text-amber-700">
+      ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold text-rose-600">
             Low Stock (${currentStock})
          </span>`
-      : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-bold text-emerald-700">
+      : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold text-emerald-600">
             (${currentStock}) in stock
          </span>`;
 
@@ -163,9 +167,7 @@ function renderItems(items) {
       <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
         ${item.category_name || "Uncategorized"}
       </td>
-      <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
-        ${item.supplier_name || "N/A"}
-      </td>
+      
       <td class="py-3.5 px-4 sm:px-6 text-left">${stockBadge}</td>
       <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
         ${safetyStock}
@@ -250,7 +252,7 @@ async function saveItem(id = null) {
 
   const name = document.getElementById("itemName").value.trim();
   const category_id = document.getElementById("itemCategory").value;
-  const supplier_id = document.getElementById("itemSupplier").value;
+  // const supplier_id = document.getElementById("itemSupplier").value;
   const safety_stock = document.getElementById("itemSafetyStock").value.trim();
   const selling_price = document
     .getElementById("itemSellingPrice")
@@ -259,7 +261,7 @@ async function saveItem(id = null) {
   const localErrors = {};
   if (!name) localErrors["name"] = "Item name is required.";
   if (!category_id) localErrors["category_id"] = "Please select a category.";
-  if (!supplier_id) localErrors["supplier_id"] = "Please select a supplier.";
+  // if (!supplier_id) localErrors["supplier_id"] = "Please select a supplier.";
   if (safety_stock === "")
     localErrors["safety_stock"] = "Safety stock is required.";
   if (selling_price === "")
@@ -277,7 +279,7 @@ async function saveItem(id = null) {
         id,
         name,
         category_id,
-        supplier_id,
+        // supplier_id,
         safety_stock,
         selling_price,
       );
@@ -285,7 +287,7 @@ async function saveItem(id = null) {
       result = await createItem(
         name,
         category_id,
-        supplier_id,
+        // supplier_id,
         safety_stock,
         selling_price,
       );
@@ -346,17 +348,17 @@ async function openItemModal({ title, item = null }) {
           .join("")
       : `<option value="" disabled>No categories available.</option>`;
 
-  const supplierOptions =
-    suppliersList.length > 0
-      ? suppliersList
-          .map(
-            (sup) =>
-              `<option value="${sup.id}" ${item && Number(item.supplier_id) === Number(sup.id) ? "selected" : ""}>
-               ${sup.name}
-             </option>`,
-          )
-          .join("")
-      : `<option value="" disabled>No suppliers available</option>`;
+  // const supplierOptions =
+  //   suppliersList.length > 0
+  //     ? suppliersList
+  //         .map(
+  //           (sup) =>
+  //             `<option value="${sup.id}" ${item && Number(item.supplier_id) === Number(sup.id) ? "selected" : ""}>
+  //              ${sup.name}
+  //            </option>`,
+  //         )
+  //         .join("")
+  //     : `<option value="" disabled>No suppliers available</option>`;
 
   openModal({
     titleText: title,
@@ -392,20 +394,7 @@ async function openItemModal({ title, item = null }) {
           <p class="error-msg text-xs text-rose-500 font-medium mt-1 hidden" id="error-category_id"></p>
         </div>
 
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
-            Supplier <span class="text-red-500">*</span>
-          </label>
-          <select
-            id="itemSupplier"
-            name="supplier_id"
-            class="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 bg-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
-          >
-            <option value="">Select Supplier</option>
-            ${supplierOptions}
-          </select>
-          <p class="error-msg text-xs text-rose-500 font-medium mt-1 hidden" id="error-supplier_id"></p>
-        </div>
+        
 
         <div class="grid grid-cols-2 gap-3">
           <div>
