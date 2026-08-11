@@ -37,8 +37,8 @@ if (!isset($_SESSION['user_id'])) {
             <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                     <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Sales</h1>
-                    <p class="text-xs sm:text-sm text-gray-500 mt-1">Monitor and record your sales accross multiple
-                        suppliers.</p>
+                    <p class="text-xs sm:text-sm text-gray-500 mt-1">Record and review outgoing stock sold to
+                        customers</p>
                 </div>
 
                 <!-- Controls: Stat Counter + Primary Button -->
@@ -63,37 +63,38 @@ if (!isset($_SESSION['user_id'])) {
             <!-- Table Container Card -->
             <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
 
-                <!-- Controls Bar: Search & Filtering -->
+                <!-- Controls Bar: Search -->
                 <div
                     class="p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-gray-100">
                     <div class="relative w-full sm:w-72">
                         <i data-lucide="search"
                             class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                        <input id="searchInput" type="text" placeholder="Search Sale..."
+                        <input id="searchInput" type="text" placeholder="Search Sales..."
                             class="w-full bg-gray-100 text-sm rounded-lg pl-10 pr-4 py-2 border border-transparent focus:bg-white focus:border-gray-300 focus:ring-2 focus:ring-black/5 outline-none transition placeholder-gray-400" />
                     </div>
                 </div>
 
-                <!-- Table View -->
-                <div class="max-h-[500px] overflow-y-auto overflow-x-auto">
+                <!-- Table View (desktop) -->
+                <div class="hidden md:block max-h-[500px] overflow-y-auto overflow-x-auto">
                     <table id="salesTable" class="w-full min-w-[700px] border-collapse">
                         <thead class="sticky top-0 bg-gray-50 z-10">
                             <tr
                                 class="bg-gray-50 border-b border-gray-200 text-[11px] font-bold tracking-wider text-gray-500 uppercase select-none">
                                 <th class="py-3.5 px-4 sm:px-6 text-left cursor-pointer hover:text-gray-800 transition">
-                                    <div class="flex items-center space-x-1">
-                                        <span>SALES ID</span>
-                                        <i data-lucide="arrow-up-down" class="w-3 h-3 text-gray-400"></i>
-                                    </div>
+                                        <span>SALE ID</span>
                                 </th>
-                                <th class="py-3.5 px-4 sm:px-6 text-left">TOTAL AMOUNT</th>
                                 <th class="py-3.5 px-4 sm:px-6 text-left">SALE DATE</th>
-                                <th class="py-3.5 px-4 sm:px-6 text-right"> ACTIONS</th>
+                                <th class="py-3.5 px-4 sm:px-6 text-left">TOTAL AMOUNT</th>
+                                <th class="py-3.5 px-4 sm:px-6 text-right">ACTIONS</th>
                             </tr>
                         </thead>
                         <tbody id="salesTableBody" class="divide-y divide-gray-100 text-xs sm:text-sm">
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Card View (mobile) -->
+                <div id="salesCardList" class="md:hidden max-h-[500px] overflow-y-auto divide-y divide-gray-100">
                 </div>
 
                 <!-- Table Footer / Pagination -->
@@ -103,7 +104,7 @@ if (!isset($_SESSION['user_id'])) {
                         Showing <span id="showingCount" class="font-semibold text-gray-900">0</span>
                         out of
                         <span id="totalCount" class="font-semibold text-gray-900"></span>
-                         items
+                        sales
                     </div>
                 </div>
 
@@ -113,6 +114,7 @@ if (!isset($_SESSION['user_id'])) {
     </div>
 
     <script type="module" src="../js/controller/salesController.js"></script>
+
 
 
 </body>

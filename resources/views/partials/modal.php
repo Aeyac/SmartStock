@@ -1,9 +1,10 @@
 <!-- Modal Backdrop -->
 <div id="modal"
-    class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/40 backdrop-blur-sm transition-opacity duration-200">
+    class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/40 backdrop-blur-sm transition-opacity duration-200 ease-out opacity-0">
 
-    <div
-        class="relative w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 shadow-2xl transition-all border border-slate-100">
+    <!-- Modal Card (Targeted automatically as first child by JS) -->
+    <div id="modalCard"
+        class="relative w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 shadow-2xl transition-all duration-200 ease-out border border-slate-100 opacity-0 scale-95">
 
         <div class="flex items-center justify-between border-b border-slate-100 pb-4">
             <h2 id="modalTitle" class="text-lg font-bold text-slate-800 tracking-tight"></h2>

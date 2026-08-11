@@ -16,6 +16,7 @@ import {
   showModalErrors,
   clearModalErrors,
 } from "./modalController.js";
+import { toastSuccess, toastError } from "./toastController.js";
 import { formatCurrency } from "../../../utils/Utility.js";
 
 console.log("loaded");
@@ -59,15 +60,21 @@ async function savePurchase() {
       if (result.errors) {
         // Display validation errors returned directly from PHP
         showModalErrors(result.errors);
+      } else if (result.message) {
+        toastError(result.message, "Purchase");
       }
       return;
     }
 
-    alert(result.message || "Purchase recorded successfully!");
+    toastSuccess(
+      result.message || "Purchase recorded successfully!",
+      "Purchase",
+    );
     closeModal();
     loadPurchases();
   } catch (error) {
     console.error(error);
+    toastError("An unexpected error occurred while saving.", "Purchase");
   }
 }
 
@@ -94,11 +101,11 @@ async function loadPurchases() {
 
       applyFilters();
     } else {
-      alert(result.message || "Failed to load purchases.");
+      toastError(result.message || "Failed to load purchases.", "Purchase");
     }
   } catch (error) {
     console.error(error);
-    alert("Unable to load purchases.");
+    toastError("Unable to load purchases. Please try again.", "Purchase");
   }
 }
 
@@ -130,11 +137,16 @@ if (searchInput) {
   });
 }
 
+// ======================
+// Render (table for desktop, cards for mobile)
+// ======================
 function renderPurchases(purchases, totalPurchasesCount = 0) {
   const tbody = document.querySelector("#purchasesTableBody");
-  if (!tbody) return;
+  const cardList = document.querySelector("#purchasesCardList");
+  if (!tbody || !cardList) return;
 
   tbody.innerHTML = "";
+  cardList.innerHTML = "";
 
   const showingCount = document.getElementById("showingCount");
   const totalCount = document.getElementById("totalCount");
@@ -142,21 +154,19 @@ function renderPurchases(purchases, totalPurchasesCount = 0) {
   if (showingCount) showingCount.innerHTML = purchases.length;
   if (totalCount) totalCount.innerHTML = totalPurchasesCount;
 
-
   if (purchases.length === 0) {
-    tbody.innerHTML = `
-    <tr>
-      <td colspan="5" class="py-10 text-center text-gray-500">
-        <div class="flex flex-col items-center gap-2">
-          <i data-lucide="search-x" class="w-10 h-10 text-gray-300"></i>
-          <p class="text-base font-medium">No purchases found</p>
-          <p class="text-sm text-gray-400">
-            Your purchases table looks empty. Try adjusting your search.
-          </p>
-        </div>
-      </td>
-    </tr>
-  `;
+    const emptyHTML = `
+      <div class="flex flex-col items-center gap-2 py-10 text-center text-gray-500">
+        <i data-lucide="search-x" class="w-10 h-10 text-gray-300"></i>
+        <p class="text-base font-medium">No purchases found</p>
+        <p class="text-sm text-gray-400">
+          Your purchases table looks empty. Try adjusting your search.
+        </p>
+      </div>
+    `;
+
+    tbody.innerHTML = `<tr><td colspan="5" class="py-10 text-center text-gray-500">${emptyHTML}</td></tr>`;
+    cardList.innerHTML = emptyHTML;
 
     if (window.lucide) {
       lucide.createIcons();
@@ -166,6 +176,11 @@ function renderPurchases(purchases, totalPurchasesCount = 0) {
   }
 
   purchases.forEach((purchase) => {
+    const supplierLabel =
+      purchase.supplier_name || "Supplier #" + purchase.supplier_id;
+    const amountLabel = `₱${formatCurrency(purchase.total_amount)}`;
+
+    // ---- Table row (desktop) ----
     const tr = document.createElement("tr");
     tr.className = "hover:bg-gray-50/80 transition group";
 
@@ -177,11 +192,11 @@ function renderPurchases(purchases, totalPurchasesCount = 0) {
     </td>
 
     <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
-        ${purchase.supplier_name || "Supplier #" + purchase.supplier_id}
+        ${supplierLabel}
     </td>
 
     <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
-        ₱${formatCurrency(purchase.total_amount)}
+        ${amountLabel}
     </td>
 
     <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
@@ -197,12 +212,45 @@ function renderPurchases(purchases, totalPurchasesCount = 0) {
     </td>
   `;
 
+    // ---- Card (mobile) ----
+    const card = document.createElement("div");
+    card.className =
+      "p-4 flex flex-col gap-2.5 hover:bg-gray-50/80 transition group";
+    card.innerHTML = `
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="font-bold text-gray-900 group-hover:text-blue-600 transition truncate">
+              PO-${purchase.id}
+          </div>
+          <div class="text-[11px] text-gray-400 font-medium">${purchase.purchase_date}</div>
+        </div>
+        <span class="shrink-0 text-sm font-bold text-gray-900">
+            ${amountLabel}
+        </span>
+      </div>
+
+      <div class="text-xs sm:text-sm text-gray-600 flex items-center gap-1.5">
+        <i data-lucide="truck" class="w-3.5 h-3.5 text-gray-400"></i>
+        <span class="font-medium truncate">${supplierLabel}</span>
+      </div>
+
+      <div class="flex items-center justify-end gap-1 pt-1 border-t border-gray-100">
+          <button title="View Purchase" class="view-btn p-1.5 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition cursor-pointer">
+              <i data-lucide="eye" class="w-4 h-4"></i>
+          </button>
+      </div>
+    `;
+
     // Bind Listeners
     tr.querySelector(".view-btn").addEventListener("click", () => {
       viewPurchase(purchase.id);
     });
+    card.querySelector(".view-btn").addEventListener("click", () => {
+      viewPurchase(purchase.id);
+    });
 
     tbody.appendChild(tr);
+    cardList.appendChild(card);
   });
 
   if (window.lucide) {
@@ -210,9 +258,7 @@ function renderPurchases(purchases, totalPurchasesCount = 0) {
   }
 }
 
-// ======================
 // Add Purchase Modal
-// ======================
 const addBtn = document.getElementById("addBtn");
 if (addBtn) {
   addBtn.addEventListener("click", () => {
@@ -228,12 +274,17 @@ async function openPurchaseModal() {
       fetchItems(),
     ]);
 
-    cachedSuppliers =
+    const allFetchedSuppliers =
       supplierResult.status === "success" ? supplierResult.suppliers : [];
+    cachedSuppliers = allFetchedSuppliers.filter(
+      (supplier) => supplier.deleted_at === null,
+    );
+    console.log(cachedSuppliers);
+
     cachedItems = itemResult.status === "success" ? itemResult.items : [];
   } catch (error) {
     console.error(error);
-    alert("Unable to load suppliers/items.");
+    toastError("Unable to load suppliers/items.", "Purchase");
     return;
   }
 
@@ -420,9 +471,9 @@ function updateGrandTotal() {
 async function viewPurchase(id) {
   try {
     const result = await getPurchase(id);
-
+    console.log(result);
     if (result.status !== "success") {
-      alert(result.message || "Failed to load purchase.");
+      toastError(result.message || "Failed to load purchase.", "Purchase");
       return;
     }
 
@@ -489,7 +540,7 @@ async function viewPurchase(id) {
       .addEventListener("click", closeModal);
   } catch (error) {
     console.error(error);
-    alert("Unable to load purchase details.");
+    toastError("Unable to load purchase details.", "Purchase");
   }
 }
 

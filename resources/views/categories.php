@@ -63,38 +63,39 @@ if (!isset($_SESSION['user_id'])) {
             <!-- Table Container Card -->
             <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
 
-                <!-- Controls Bar: Search & Filtering -->
+                <!-- Controls Bar: Search & View Tabs -->
                 <div
                     class="p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-gray-100">
                     <div class="relative w-full sm:w-72">
                         <i data-lucide="search"
                             class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                        <input id="searchInput" type="text" placeholder="Search Suppliers..."
+                        <input id="searchInput" type="text" placeholder="Search Categories..."
                             class="w-full bg-gray-100 text-sm rounded-lg pl-10 pr-4 py-2 border border-transparent focus:bg-white focus:border-gray-300 focus:ring-2 focus:ring-black/5 outline-none transition placeholder-gray-400" />
                     </div>
-                    <div class="inline-flex bg-gray-100 p-1 rounded-lg text-xs font-semibold text-gray-600">
-                        <button id="activeCategoriesBtn"
-                            class="px-3 py-1.5 rounded-md bg-white text-gray-900 shadow-sm cursor-pointer">
-                            Active
-                        </button>
-                        <button id="archivedCategoriesBtn"
-                            class="px-3 py-1.5 rounded-md hover:text-gray-900 transition cursor-pointer">
-                            Archived
-                        </button>
+
+                    <div class="flex items-center justify-between sm:justify-end space-x-2">
+                        <div
+                            class="inline-flex bg-gray-100 p-1 rounded-lg text-xs font-semibold text-gray-600 flex-1 sm:flex-initial justify-between">
+                            <button id="allCategoriesBtn"
+                                class="px-3 py-1.5 rounded-md bg-white text-gray-900 shadow-sm flex-1 sm:flex-none text-center cursor-pointer">
+                                All
+                            </button>
+                            <button id="archivedCategoriesBtn"
+                                class="px-3 py-1.5 rounded-md hover:text-gray-900 transition flex-1 sm:flex-none text-center cursor-pointer">
+                                Archived
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Table View -->
-                <div class="max-h-[500px] overflow-y-auto overflow-x-auto">
-                    <table id="suppliersTable" class="w-full min-w-[700px] border-collapse">
+                <!-- Table View (desktop) -->
+                <div class="hidden md:block max-h-[500px] overflow-y-auto overflow-x-auto">
+                    <table id="categoriesTable" class="w-full min-w-[700px] border-collapse">
                         <thead class="sticky top-0 bg-gray-50 z-10">
                             <tr
                                 class="bg-gray-50 border-b border-gray-200 text-[11px] font-bold tracking-wider text-gray-500 uppercase select-none">
                                 <th class="py-3.5 px-4 sm:px-6 text-left cursor-pointer hover:text-gray-800 transition">
-                                    <div class="flex items-center space-x-1">
-                                        <span>CATEGORY NAME</span>
-                                        <i data-lucide="arrow-up-down" class="w-3 h-3 text-gray-400"></i>
-                                    </div>
+                                    <span>CATEGORY NAME</span>
                                 </th>
                                 <th class="py-3.5 px-4 sm:px-6 text-left">TOTAL ITEMS</th>
                                 <th class="py-3.5 px-4 sm:px-6 text-left">CREATED AT</th>
@@ -105,6 +106,11 @@ if (!isset($_SESSION['user_id'])) {
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Card View (mobile) -->
+                <div id="categoriesCardList" class="md:hidden max-h-[500px] overflow-y-auto divide-y divide-gray-100">
+                </div>
+
                 <div
                     class="p-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500 font-medium">
                     <div>

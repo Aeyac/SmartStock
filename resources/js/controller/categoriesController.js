@@ -14,6 +14,8 @@ import {
   clearModalErrors,
 } from "./modalController.js";
 
+import { toastSuccess, toastError, confirmToast } from "./toastController.js";
+
 console.log("loaded");
 
 async function saveCategory(id = null) {
@@ -40,16 +42,17 @@ async function saveCategory(id = null) {
         showModalErrors(result.errors);
       } else if (result.message) {
         // e.g. "This category already exists." has no field to attach to
-        alert(result.message);
+        toastError(result.message);
       }
       return;
     }
 
-    alert(result.message || "Saved successfully!");
+    toastSuccess(result.message || "Saved successfully!");
     closeModal();
     loadCategories();
   } catch (error) {
     console.error(error);
+    toastError("An unexpected error occurred while saving.");
   }
 }
 
@@ -57,20 +60,27 @@ async function saveCategory(id = null) {
 // Archive / Restore
 // ======================
 async function archiveCategory(id) {
-  if (!confirm("Archive this category? You can restore it later.")) return;
+  const confirmed = await confirmToast({
+    title: "Archive Category?",
+    message: "You can restore it later from the Archived tab.",
+    confirmText: "Archive",
+    danger: true,
+  });
+
+  if (!confirmed) return;
 
   try {
     const result = await deleteCategory(id);
 
     if (result.status === "success") {
-      alert(result.message || "Category archived successfully.");
+      toastSuccess(result.message || "Category archived successfully.");
       loadCategories();
     } else {
-      alert(result.message || "Failed to archive category.");
+      toastError(result.message || "Failed to archive category.");
     }
   } catch (error) {
     console.error(error);
-    alert("An error occurred while archiving.");
+    toastError("An error occurred while archiving.");
   }
 }
 
@@ -79,28 +89,28 @@ async function restoreCategoryHandler(id) {
     const result = await restoreCategory(id);
 
     if (result.status === "success") {
-      alert(result.message || "Category restored successfully.");
+      toastSuccess(result.message || "Category restored successfully.");
       loadCategories();
     } else {
       // e.g. "An active category with this name already exists."
-      alert(result.message || "Failed to restore category.");
+      toastError(result.message || "Failed to restore category.");
     }
   } catch (error) {
     console.error(error);
-    alert("An error occurred while restoring.");
+    toastError("An error occurred while restoring.");
   }
 }
 
 // ======================
-// Load & Render Table
-// ======================
-// ======================
 // State
 // ======================
-let currentView = "active"; // "active" | "archived"
+let currentView = "all"; // "all" | "archived"
 let allCategories = [];
 let currentSearch = "";
 
+// ======================
+// Load & Render Table
+// ======================
 async function loadCategories() {
   try {
     const result =
@@ -118,19 +128,19 @@ async function loadCategories() {
 
       applyFilters();
     } else {
-      alert(result.message || "Failed to load categories.");
+      toastError(result.message || "Failed to load categories.");
     }
   } catch (error) {
     console.error(error);
-    alert("Unable to load categories.");
+    toastError("Unable to load categories.");
   }
 }
 
 // ======================
-// Active / Archived Toggle
+// All / Archived Toggle
 // ======================
 const viewBtns = [
-  { el: document.getElementById("activeCategoriesBtn"), value: "active" },
+  { el: document.getElementById("allCategoriesBtn"), value: "all" },
   { el: document.getElementById("archivedCategoriesBtn"), value: "archived" },
 ];
 
@@ -145,6 +155,13 @@ viewBtns.forEach(({ el, value }) => {
     el.classList.add(...activeClasses);
 
     currentView = value;
+
+    // "Add Category" only makes sense on the All tab — archived
+    // categories can't be created fresh, only restored.
+    const isArchivedView = value === "archived";
+    const addBtnEl = document.getElementById("addBtn");
+    if (addBtnEl) addBtnEl.classList.toggle("hidden", isArchivedView);
+
     loadCategories();
   });
 });
@@ -174,17 +191,22 @@ if (searchInput) {
   });
 }
 
+// ======================
+// Render (table for desktop, cards for mobile)
+// ======================
 function renderCategories(categories, totalCategoriesTotal = 0) {
   const tbody = document.querySelector("#categoriesTableBody");
+  const cardList = document.querySelector("#categoriesCardList");
   const showingCount = document.getElementById("showingCount");
   const totalCount = document.getElementById("totalCount");
 
   if (showingCount) showingCount.innerHTML = categories.length;
   if (totalCount) totalCount.innerHTML = totalCategoriesTotal;
 
-  if (!tbody) return;
+  if (!tbody || !cardList) return;
 
   tbody.innerHTML = "";
+  cardList.innerHTML = "";
 
   if (categories.length === 0) {
     const emptyMessage =
@@ -192,17 +214,16 @@ function renderCategories(categories, totalCategoriesTotal = 0) {
         ? "No archived categories."
         : "Your categories table looks empty. Try adjusting your search.";
 
-    tbody.innerHTML = `
-    <tr>
-      <td colspan="5" class="py-10 text-center text-gray-500">
-        <div class="flex flex-col items-center gap-2">
-          <i data-lucide="search-x" class="w-10 h-10 text-gray-300"></i>
-          <p class="text-base font-medium">No categories found</p>
-          <p class="text-sm text-gray-400">${emptyMessage}</p>
-        </div>
-      </td>
-    </tr>
-  `;
+    const emptyHTML = `
+      <div class="flex flex-col items-center gap-2 py-10 text-center text-gray-500">
+        <i data-lucide="search-x" class="w-10 h-10 text-gray-300"></i>
+        <p class="text-base font-medium">No categories found</p>
+        <p class="text-sm text-gray-400">${emptyMessage}</p>
+      </div>
+    `;
+
+    tbody.innerHTML = `<tr><td colspan="4" class="py-10 text-center text-gray-500">${emptyHTML}</td></tr>`;
+    cardList.innerHTML = emptyHTML;
 
     if (window.lucide) {
       lucide.createIcons();
@@ -212,8 +233,7 @@ function renderCategories(categories, totalCategoriesTotal = 0) {
   }
 
   categories.forEach((category) => {
-    const tr = document.createElement("tr");
-    tr.className = "hover:bg-gray-50/80 transition group";
+    const itemCount = 8;
 
     const dateLabel =
       currentView === "archived"
@@ -236,6 +256,10 @@ function renderCategories(categories, totalCategoriesTotal = 0) {
           </button>
         `;
 
+    // ---- Table row (desktop) ----
+    const tr = document.createElement("tr");
+    tr.className = "hover:bg-gray-50/80 transition group";
+
     tr.innerHTML = `
     <td class="py-3.5 px-4 sm:px-6 text-left">
         <div class="font-bold text-gray-900 group-hover:text-blue-600 transition">
@@ -245,7 +269,7 @@ function renderCategories(categories, totalCategoriesTotal = 0) {
     </td>
 
     <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
-        8
+        ${itemCount}
     </td>
 
     <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
@@ -259,22 +283,58 @@ function renderCategories(categories, totalCategoriesTotal = 0) {
     </td>
   `;
 
+    // ---- Card (mobile) ----
+    const card = document.createElement("div");
+    card.className =
+      "p-4 flex flex-col gap-2.5 hover:bg-gray-50/80 transition group";
+    card.innerHTML = `
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="font-bold text-gray-900 group-hover:text-blue-600 transition truncate">
+              ${category.name}
+          </div>
+          <div class="text-[11px] text-gray-400 font-medium">ID: CATEG-${category.id}</div>
+        </div>
+        <span class="shrink-0 text-[11px] text-gray-400 font-medium">
+            ${dateLabel}
+        </span>
+      </div>
+
+      <div class="text-xs sm:text-sm text-gray-600 flex items-center gap-1.5">
+        <i data-lucide="box" class="w-3.5 h-3.5 text-gray-400"></i>
+        <span class="font-medium">${itemCount} items</span>
+      </div>
+
+      <div class="flex items-center justify-end gap-1 pt-1 border-t border-gray-100">
+          ${actionsHTML}
+      </div>
+    `;
+
     // Bind Listeners
     if (currentView === "archived") {
       tr.querySelector(".restore-btn").addEventListener("click", () => {
+        restoreCategoryHandler(category.id);
+      });
+      card.querySelector(".restore-btn").addEventListener("click", () => {
         restoreCategoryHandler(category.id);
       });
     } else {
       tr.querySelector(".edit-btn").addEventListener("click", () => {
         openCategoryModal({ title: "Edit Category", category });
       });
-
       tr.querySelector(".archive-btn").addEventListener("click", () => {
+        archiveCategory(category.id);
+      });
+      card.querySelector(".edit-btn").addEventListener("click", () => {
+        openCategoryModal({ title: "Edit Category", category });
+      });
+      card.querySelector(".archive-btn").addEventListener("click", () => {
         archiveCategory(category.id);
       });
     }
 
     tbody.appendChild(tr);
+    cardList.appendChild(card);
   });
 
   if (window.lucide) {

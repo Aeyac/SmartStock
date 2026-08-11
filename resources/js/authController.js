@@ -1,6 +1,11 @@
 import { apiRequest } from "../fetchApi.js";
+import { toastSuccess } from "./controller/toastController.js";
 console.log("loaded");
 const BASE_URL = "/smart_stock/endpoints/Auth.php";
+
+if (window.lucide) {
+  lucide.createIcons();
+}
 
 export function registerUser(name, email, password) {
   return apiRequest(`${BASE_URL}?type=register`, {
@@ -49,6 +54,7 @@ if (registerForm && document.getElementById("name")) {
           btn.disabled = false;
         }
       }, 1000);
+      toastSuccess(result.message);
 
       registerForm.reset();
     } catch (err) {

@@ -74,17 +74,14 @@ if (!isset($_SESSION['user_id'])) {
                     </div>
                 </div>
 
-                <!-- Table View -->
-                <div class="max-h-[500px] overflow-y-auto overflow-x-auto">
+                <!-- Table View (desktop) -->
+                <div class="hidden md:block max-h-[500px] overflow-y-auto overflow-x-auto">
                     <table id="purchasesTable" class="w-full min-w-[700px] border-collapse">
                         <thead class="sticky top-0 bg-gray-50 z-10">
                             <tr
                                 class="bg-gray-50 border-b border-gray-200 text-[11px] font-bold tracking-wider text-gray-500 uppercase select-none">
                                 <th class="py-3.5 px-4 sm:px-6 text-left cursor-pointer hover:text-gray-800 transition">
-                                    <div class="flex items-center space-x-1">
                                         <span>PURCHASE ID</span>
-                                        <i data-lucide="arrow-up-down" class="w-3 h-3 text-gray-400"></i>
-                                    </div>
                                 </th>
                                 <th class="py-3.5 px-4 sm:px-6 text-left">SUPPLIER NAME</th>
                                 <th class="py-3.5 px-4 sm:px-6 text-left">TOTAL AMOUNT</th>
@@ -95,6 +92,10 @@ if (!isset($_SESSION['user_id'])) {
                         <tbody id="purchasesTableBody" class="divide-y divide-gray-100 text-xs sm:text-sm">
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Card View (mobile) -->
+                <div id="purchasesCardList" class="md:hidden max-h-[500px] overflow-y-auto divide-y divide-gray-100">
                 </div>
 
                 <!-- Table Footer / Pagination -->

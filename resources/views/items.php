@@ -99,10 +99,7 @@ if (!isset($_SESSION['user_id'])) {
 
                                 <!-- Column 1 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-left cursor-pointer hover:text-gray-800 transition">
-                                    <div class="flex items-center space-x-1">
                                         <span>ITEM NAME</span>
-                                        <i data-lucide="arrow-up-down" class="w-3 h-3 text-gray-400"></i>
-                                    </div>
                                 </th>
 
                                 <!-- Column 2 Header -->
@@ -111,10 +108,7 @@ if (!isset($_SESSION['user_id'])) {
 
                                 <!-- Column 3 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-left cursor-pointer hover:text-gray-800 transition">
-                                    <div class="flex items-center space-x-1">
                                         <span>STOCK LEVEL</span>
-                                        <i data-lucide="arrow-up-down" class="w-3 h-3 text-gray-400"></i>
-                                    </div>
                                 </th>
 
                                 <!-- Column 4 Header -->

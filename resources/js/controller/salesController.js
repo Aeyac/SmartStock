@@ -12,6 +12,7 @@ import {
   showModalErrors,
   clearModalErrors,
 } from "./modalController.js";
+import { toastSuccess, toastError } from "./toastController.js";
 
 console.log("loaded");
 
@@ -51,15 +52,18 @@ async function saveSale() {
         // Display validation errors returned directly from PHP
         // (this is also where "only X unit(s) left in stock" errors surface)
         showModalErrors(result.errors);
+      } else if (result.message) {
+        toastError(result.message, "Sale");
       }
       return;
     }
 
-    alert(result.message || "Sale recorded successfully!");
+    toastSuccess(result.message || "Sale recorded successfully!", "Sale");
     closeModal();
     loadSales();
   } catch (error) {
     console.error(error);
+    toastError("An unexpected error occurred while saving.", "Sale");
   }
 }
 
@@ -86,11 +90,11 @@ async function loadSales() {
 
       applyFilters();
     } else {
-      alert(result.message || "Failed to load sales.");
+      toastError(result.message || "Failed to load sales.", "Sale");
     }
   } catch (error) {
     console.error(error);
-    alert("Unable to load sales.");
+    toastError("Unable to load sales. Please try again.", "Sale");
   }
 }
 
@@ -121,32 +125,36 @@ if (searchInput) {
   });
 }
 
+// ======================
+// Render (table for desktop, cards for mobile)
+// ======================
 function renderSales(sales, totalSaleCount = 0) {
   const showingCount = document.getElementById("showingCount");
   const totalCount = document.getElementById("totalCount");
-  
+
   if (totalCount) totalCount.innerHTML = totalSaleCount;
   if (showingCount) showingCount.innerHTML = sales.length;
 
   const tbody = document.querySelector("#salesTableBody");
-  if (!tbody) return;
+  const cardList = document.querySelector("#salesCardList");
+  if (!tbody || !cardList) return;
 
   tbody.innerHTML = "";
+  cardList.innerHTML = "";
 
   if (sales.length === 0) {
-    tbody.innerHTML = `
-    <tr>
-      <td colspan="4" class="py-10 text-center text-gray-500">
-        <div class="flex flex-col items-center gap-2">
-          <i data-lucide="search-x" class="w-10 h-10 text-gray-300"></i>
-          <p class="text-base font-medium">No sales found</p>
-          <p class="text-sm text-gray-400">
-            Your sales table looks empty. Try adjusting your search.
-          </p>
-        </div>
-      </td>
-    </tr>
-  `;
+    const emptyHTML = `
+      <div class="flex flex-col items-center gap-2 py-10 text-center text-gray-500">
+        <i data-lucide="search-x" class="w-10 h-10 text-gray-300"></i>
+        <p class="text-base font-medium">No sales found</p>
+        <p class="text-sm text-gray-400">
+          Your sales table looks empty. Try adjusting your search.
+        </p>
+      </div>
+    `;
+
+    tbody.innerHTML = `<tr><td colspan="4" class="py-10 text-center text-gray-500">${emptyHTML}</td></tr>`;
+    cardList.innerHTML = emptyHTML;
 
     if (window.lucide) {
       lucide.createIcons();
@@ -156,6 +164,9 @@ function renderSales(sales, totalSaleCount = 0) {
   }
 
   sales.forEach((sale) => {
+    const amountLabel = `₱${formatCurrency(sale.total_amount)}`;
+
+    // ---- Table row (desktop) ----
     const tr = document.createElement("tr");
     tr.className = "hover:bg-gray-50/80 transition group";
 
@@ -171,7 +182,7 @@ function renderSales(sales, totalSaleCount = 0) {
     </td>
 
     <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
-        ₱${formatCurrency(sale.total_amount)}
+        ${amountLabel}
     </td>
 
     <td class="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
@@ -183,12 +194,40 @@ function renderSales(sales, totalSaleCount = 0) {
     </td>
   `;
 
+    // ---- Card (mobile) ----
+    const card = document.createElement("div");
+    card.className =
+      "p-4 flex flex-col gap-2.5 hover:bg-gray-50/80 transition group";
+    card.innerHTML = `
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="font-bold text-gray-900 group-hover:text-blue-600 transition truncate">
+              SO-${sale.id}
+          </div>
+          <div class="text-[11px] text-gray-400 font-medium">${sale.sale_date}</div>
+        </div>
+        <span class="shrink-0 text-sm font-bold text-gray-900">
+            ${amountLabel}
+        </span>
+      </div>
+
+      <div class="flex items-center justify-end gap-1 pt-1 border-t border-gray-100">
+          <button title="View Sale" class="view-btn p-1.5 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition cursor-pointer">
+              <i data-lucide="eye" class="w-4 h-4"></i>
+          </button>
+      </div>
+    `;
+
     // Bind Listeners
     tr.querySelector(".view-btn").addEventListener("click", () => {
       viewSale(sale.id);
     });
+    card.querySelector(".view-btn").addEventListener("click", () => {
+      viewSale(sale.id);
+    });
 
     tbody.appendChild(tr);
+    cardList.appendChild(card);
   });
 
   if (window.lucide) {
@@ -213,7 +252,7 @@ async function openSaleModal() {
     cachedItems = itemResult.status === "success" ? itemResult.items : [];
   } catch (error) {
     console.error(error);
-    alert("Unable to load items.");
+    toastError("Unable to load items.", "Sale");
     return;
   }
 
@@ -413,7 +452,7 @@ async function viewSale(id) {
     const result = await getSale(id);
 
     if (result.status !== "success") {
-      alert(result.message || "Failed to load sale.");
+      toastError(result.message || "Failed to load sale.", "Sale");
       return;
     }
 
@@ -476,7 +515,7 @@ async function viewSale(id) {
       .addEventListener("click", closeModal);
   } catch (error) {
     console.error(error);
-    alert("Unable to load sale details.");
+    toastError("Unable to load sale details.", "Sale");
   }
 }
 

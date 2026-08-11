@@ -51,9 +51,9 @@ if (!isset($_SESSION['user_id'])) {
                             <span id="totalSuppliers" class="text-base sm:text-lg font-bold text-gray-900"></span>
                         </div>
                         <div class="pl-4 sm:pl-6 text-center sm:text-left">
-                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">ACTIVE
-                                SUPPLIERS</span>
-                            <span id="totalActive" class="text-base sm:text-lg font-bold text-emerald-700">0</span>
+                            <span
+                                class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">ARCHIVED</span>
+                            <span id="totalArchived" class="text-base sm:text-lg font-bold text-gray-500">0</span>
                         </div>
                     </div>
 
@@ -68,7 +68,7 @@ if (!isset($_SESSION['user_id'])) {
             <!-- Table Container Card -->
             <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
 
-                <!-- Controls Bar: Search & Filtering -->
+                <!-- Controls Bar: Search + View Tabs -->
                 <div
                     class="p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-gray-100">
                     <div class="relative w-full sm:w-72">
@@ -81,46 +81,36 @@ if (!isset($_SESSION['user_id'])) {
                     <div class="flex items-center justify-between sm:justify-end space-x-2">
                         <div
                             class="inline-flex bg-gray-100 p-1 rounded-lg text-xs font-semibold text-gray-600 flex-1 sm:flex-initial justify-between">
-                            <button id="allButton"
-                                class="px-3 py-1.5 rounded-md bg-white text-gray-900 shadow-sm flex-1 sm:flex-none text-center cursor-pointer">All</button>
-                            <button id="activeBtn"
-                                class="px-3 py-1.5 rounded-md hover:text-gray-900 transition flex-1 sm:flex-none text-center cursor-pointer">Active</button>
-                            <button id="inactiveBtn"
-                                class="px-3 py-1.5 rounded-md hover:text-gray-900 transition flex-1 sm:flex-none text-center cursor-pointer">Inactive</button>
+                            <button id="activeSuppliersBtn"
+                                class="px-3 py-1.5 rounded-md bg-white text-gray-900 shadow-sm flex-1 sm:flex-none text-center cursor-pointer">Suppliers</button>
+                            <button id="archivedSuppliersBtn"
+                                class="px-3 py-1.5 rounded-md hover:text-gray-900 transition flex-1 sm:flex-none text-center cursor-pointer">Archived</button>
                         </div>
-
-                        <!-- <button title="Export CSV"
-                            class="p-2 text-gray-500 hover:text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition shrink-0 cursor-pointer">
-                            <i data-lucide="download" class="w-4 h-4"></i>
-                        </button> -->
                     </div>
                 </div>
 
-                <!-- Table View -->
-                <div class="max-h-[500px] overflow-y-auto overflow-x-auto">
+                <!-- Table View (desktop) -->
+                <div class="hidden md:block max-h-[500px] overflow-y-auto overflow-x-auto">
                     <table id="suppliersTable" class="w-full min-w-[700px] border-collapse">
                         <thead class="sticky top-0 bg-gray-50 z-10">
                             <tr
                                 class="bg-gray-50 border-b border-gray-200 text-[11px] font-bold tracking-wider text-gray-500 uppercase select-none">
                                 <th class="py-3.5 px-4 sm:px-6 text-left cursor-pointer hover:text-gray-800 transition">
-                                    <div class="flex items-center space-x-1">
                                         <span>SUPPLIER NAME</span>
-                                        <i data-lucide="arrow-up-down" class="w-3 h-3 text-gray-400"></i>
-                                    </div>
                                 </th>
                                 <th class="py-3.5 px-4 sm:px-6 text-left">CONTACT NUMBER</th>
                                 <th class="py-3.5 px-4 sm:px-6 text-left">EMAIL ADDRESS</th>
-                                <th class="py-3.5 px-4 sm:px-6 text-left cursor-pointer hover:text-gray-800 transition">
-                                    <div class="flex items-center space-x-1">
-                                        <span>STATUS</span>
-                                    </div>
-                                </th>
+                                <th class="py-3.5 px-4 sm:px-6 text-left">ADDED</th>
                                 <th class="py-3.5 px-4 sm:px-6 text-right">ACTIONS</th>
                             </tr>
                         </thead>
                         <tbody id="suppliersTableBody" class="divide-y divide-gray-100 text-xs sm:text-sm">
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Card View (mobile) -->
+                <div id="suppliersCardList" class="md:hidden max-h-[500px] overflow-y-auto divide-y divide-gray-100">
                 </div>
 
                 <!-- Table Footer / Pagination -->

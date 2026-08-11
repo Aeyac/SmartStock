@@ -3,6 +3,7 @@ import {
   createSupplier,
   updateSupplier,
   deleteSupplier,
+  restoreSupplier,
 } from "../api/suppliersApi.js";
 
 // Save (Create or Update) Handler
@@ -13,7 +14,23 @@ import {
   clearModalErrors,
 } from "./modalController.js";
 
+import { toastSuccess, toastError, confirmToast } from "./toastController.js";
+
 console.log("loaded");
+
+// Helpers
+function formatDate(dateStr) {
+  if (!dateStr) return "—";
+
+  const date = new Date(dateStr.replace(" ", "T"));
+  if (isNaN(date.getTime())) return "—";
+
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
 
 async function saveSupplier(id = null) {
   clearModalErrors();
@@ -23,7 +40,6 @@ async function saveSupplier(id = null) {
     .getElementById("supplierContact")
     .value.trim();
   const email = document.getElementById("supplierEmail").value.trim();
-  const status = document.getElementById("supplierStatus").value.trim();
 
   // Basic client-side check before fetching
   const localErrors = {};
@@ -39,18 +55,21 @@ async function saveSupplier(id = null) {
 
   try {
     const result = id
-      ? await updateSupplier(id, name, contact_number, email, status)
-      : await createSupplier(name, contact_number, email, status);
+      ? await updateSupplier(id, name, contact_number, email)
+      : await createSupplier(name, contact_number, email);
 
     if (result.status === "error") {
       if (result.errors) {
         // Display validation errors returned directly from PHP
         showModalErrors(result.errors);
+      } else if (result.message) {
+        // e.g. duplicate email conflict, or "archived — restore first"
+        toastError(result.message, "Supplier");
       }
       return;
     }
 
-    alert(result.message || "Saved successfully!");
+    toastSuccess(result.message);
     closeModal();
     loadSuppliers();
   } catch (error) {
@@ -59,80 +78,134 @@ async function saveSupplier(id = null) {
 }
 
 // ======================
-// Delete Supplier
+// Archive / Restore
 // ======================
-async function removeSupplier(id) {
-  if (!confirm("Are you sure you want to delete this supplier?")) return;
+async function archiveSupplier(id) {
+  const confirmed = await confirmToast({
+    title: "Archive this supplier?",
+    message: "You can restore it later from the Archived tab.",
+    confirmText: "Archive",
+    danger: true,
+  });
+  if (!confirmed) return;
 
   try {
     const result = await deleteSupplier(id);
 
     if (result.status === "success") {
-      alert(result.message || "Supplier deleted successfully.");
+      toastSuccess(result.message, "Supplier");
       loadSuppliers();
     } else {
-      alert(result.message || "Failed to delete supplier.");
+      toastError(result.message, "Supplier");
     }
   } catch (error) {
     console.error(error);
-    alert("An error occurred while deleting.");
+    toastError("An error occurred while archiving.", "Supplier");
+  }
+}
+
+async function restoreSupplierHandler(id) {
+  try {
+    const result = await restoreSupplier(id);
+
+    if (result.status === "success") {
+      toastSuccess(result.message, "Supplier");
+      loadSuppliers();
+    } else {
+      // e.g. "An active supplier with this email already exists."
+      toastError(result.message, "Supplier");
+    }
+  } catch (error) {
+    console.error(error);
+    toastError("An error occurred while restoring.", "Supplier");
   }
 }
 
 // ======================
-// Load & Render Table
-// ======================
-// ======================
 // State
 // ======================
+let currentView = "active"; // "active" | "archived"
 let allSuppliers = [];
-let currentFilter = "all";
 let currentSearch = "";
 
+// ======================
+// Load & Render Table
+// ======================
 async function loadSuppliers() {
   try {
     const result = await fetchSuppliers();
+
     const totalCount = document.getElementById("totalSuppliers");
-    const activeCount = document.getElementById("totalActive");
+    const archivedCount = document.getElementById("totalArchived");
 
     console.log(result.suppliers);
 
     if (result.status === "success") {
       allSuppliers = result.suppliers;
 
-      totalCount.innerHTML = allSuppliers.length;
-      activeCount.innerHTML = allSuppliers.filter((supplier) => {
-        if (supplier.active) {
-          return supplier;
-        }
-      }).length;
+      const activeSuppliers = allSuppliers.filter(
+        (supplier) => supplier.deleted_at === null,
+      );
+      const archivedSuppliers = allSuppliers.filter(
+        (supplier) => supplier.deleted_at !== null,
+      );
+
+      if (totalCount) totalCount.innerHTML = activeSuppliers.length;
+      if (archivedCount) archivedCount.innerHTML = archivedSuppliers.length;
 
       applyFilters();
     } else {
-      alert(result.message || "Failed to load suppliers.");
+      toastError(result.message || "Failed to load suppliers.", "Supplier");
     }
   } catch (error) {
-    console.error(error);
-    alert("Unable to load suppliers.");
+    console.error("Load suppliers error:", error);
+    toastError("Unable to load suppliers. Please try again.", "Supplier");
   }
 }
 
 // ======================
-// Search + Filter
+// Active / Archived Toggle
+// ======================
+// Just re-filters and re-renders the data already loaded above — no
+// second network request needed when switching tabs.
+const viewBtns = [
+  { el: document.getElementById("activeSuppliersBtn"), value: "active" },
+  { el: document.getElementById("archivedSuppliersBtn"), value: "archived" },
+];
+
+const viewActiveClasses = ["bg-white", "text-gray-900", "shadow-sm"];
+
+viewBtns.forEach(({ el, value }) => {
+  if (!el) return;
+  el.addEventListener("click", () => {
+    viewBtns.forEach(
+      ({ el: btn }) => btn && btn.classList.remove(...viewActiveClasses),
+    );
+    el.classList.add(...viewActiveClasses);
+
+    currentView = value;
+
+    // "Add Supplier" only makes sense on the Suppliers tab — archived
+    // suppliers can't be created fresh, only restored.
+    const isArchivedView = value === "archived";
+    const addBtnEl = document.getElementById("addBtn");
+    if (addBtnEl) addBtnEl.classList.toggle("hidden", isArchivedView);
+
+    applyFilters();
+  });
+});
+
+// ======================
+// Search
 // ======================
 function applyFilters() {
   const term = currentSearch.trim().toLowerCase();
 
   const filtered = allSuppliers.filter((supplier) => {
-    const isActive =
-      typeof supplier.active !== "undefined"
-        ? Number(supplier.active) === 1
-        : supplier.status === "active";
+    const isArchived = supplier.deleted_at !== null;
 
-    const statusText = isActive ? "active" : "inactive";
-
-    const matchesFilter =
-      currentFilter === "all" || statusText === currentFilter;
+    // Which tab (Suppliers vs Archived) this row belongs to
+    const matchesView = currentView === "archived" ? isArchived : !isArchived;
 
     const matchesSearch =
       term === "" ||
@@ -140,10 +213,16 @@ function applyFilters() {
       supplier.contact_number?.toLowerCase().includes(term) ||
       supplier.email?.toLowerCase().includes(term);
 
-    return matchesFilter && matchesSearch;
+    return matchesView && matchesSearch;
   });
 
-  renderSuppliers(filtered, allSuppliers.length);
+  const totalForCurrentView = allSuppliers.filter((supplier) =>
+    currentView === "archived"
+      ? supplier.deleted_at !== null
+      : supplier.deleted_at === null,
+  ).length;
+
+  renderSuppliers(filtered, totalForCurrentView);
 }
 
 const searchInput = document.getElementById("searchInput");
@@ -155,35 +234,14 @@ if (searchInput) {
   });
 }
 
-// ======================
-// Filter Button Toggle
-// ======================
-const filterBtns = [
-  { el: document.getElementById("allButton"), value: "all" },
-  { el: document.getElementById("activeBtn"), value: "active" },
-  { el: document.getElementById("inactiveBtn"), value: "inactive" },
-];
-
-const activeClasses = ["bg-white", "text-gray-900", "shadow-sm"];
-
-filterBtns.forEach(({ el, value }) => {
-  if (!el) return;
-  el.addEventListener("click", () => {
-    filterBtns.forEach(
-      ({ el: btn }) => btn && btn.classList.remove(...activeClasses),
-    );
-    el.classList.add(...activeClasses);
-
-    currentFilter = value;
-    applyFilters();
-  });
-});
-
+// Render (table for desktop, cards for mobile)
 function renderSuppliers(suppliers, totalSuppliersCount = 0) {
   const tbody = document.querySelector("#suppliersTableBody");
-  if (!tbody) return;
+  const cardList = document.querySelector("#suppliersCardList");
+  if (!tbody || !cardList) return;
 
   tbody.innerHTML = "";
+  cardList.innerHTML = "";
 
   const showingCount = document.getElementById("showingCount");
   const totalCount = document.getElementById("totalCount");
@@ -191,91 +249,134 @@ function renderSuppliers(suppliers, totalSuppliersCount = 0) {
   if (totalCount) totalCount.innerHTML = totalSuppliersCount;
   if (showingCount) showingCount.innerHTML = suppliers.length;
 
-
   if (suppliers.length === 0) {
-    tbody.innerHTML = `
-    <tr>
-      <td colspan="5" class="py-10 text-center text-gray-500">
-        <div class="flex flex-col items-center gap-2">
-          <i data-lucide="search-x" class="w-10 h-10 text-gray-300"></i>
-          <p class="text-base font-medium">No suppliers found</p>
-          <p class="text-sm text-gray-400">
-            Your suppliers table looks empty. Try adjusting your search or filter.
-          </p>
-        </div>
-      </td>
-    </tr>
-  `;
+    const emptyMessage =
+      currentView === "archived"
+        ? "No archived suppliers."
+        : "Your suppliers table looks empty. Try adjusting your search.";
 
-    if (window.lucide) {
-      lucide.createIcons();
-    }
+    const emptyHTML = `
+      <div class="flex flex-col items-center gap-2 py-10 text-center text-gray-500">
+        <i data-lucide="search-x" class="w-10 h-10 text-gray-300"></i>
+        <p class="text-base font-medium">No suppliers found</p>
+        <p class="text-sm text-gray-400">${emptyMessage}</p>
+      </div>
+    `;
 
+    tbody.innerHTML = `<tr><td colspan="5" class="py-10 text-center text-gray-500">${emptyHTML}</td></tr>`;
+    cardList.innerHTML = emptyHTML;
+
+    if (window.lucide) lucide.createIcons();
     return;
   }
 
   suppliers.forEach((supplier) => {
-    const isActive =
-      typeof supplier.active !== "undefined"
-        ? Number(supplier.active) === 1
-        : (supplier.status || "").toLowerCase() === "active";
+    const addedLabel = formatDate(supplier.created_at);
 
-    // Dynamic Tailwind classes for Active (Green) vs Inactive (Red)
-    const badgeBg = isActive
-      ? "text-emerald-600"
-      : "text-rose-600";
+    const actionsHTML =
+      currentView === "archived"
+        ? `
+          <button title="Restore Supplier" class="restore-btn p-1.5 text-gray-400 hover:text-emerald-600 rounded-lg hover:bg-emerald-50 transition cursor-pointer">
+              <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+          </button>
+        `
+        : `
+          <button title="Edit Supplier" class="edit-btn p-1.5 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition cursor-pointer">
+              <i data-lucide="pencil" class="w-4 h-4"></i>
+          </button>
+          <button title="Archive Supplier" class="archive-btn p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition cursor-pointer">
+              <i data-lucide="archive" class="w-4 h-4"></i>
+          </button>
+        `;
 
-    const statusText = isActive ? "Active" : "Inactive";
-
+    // ---- Table row (desktop) ----
     const tr = document.createElement("tr");
     tr.className = "hover:bg-gray-50/80 transition group";
-
     tr.innerHTML = `
-    <td class="py-3.5 px-4 sm:px-6 text-left">
-        <div class="font-bold text-gray-900 group-hover:text-blue-600 transition">
-            ${supplier.name}
+      <td class="py-3.5 px-4 sm:px-6 text-left">
+          <div class="font-bold text-gray-900 group-hover:text-blue-600 transition">
+              ${supplier.name}
+          </div>
+          <div class="text-[11px] text-gray-400 font-medium">ID: SUP-${supplier.id}</div>
+      </td>
+      <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
+          ${supplier.contact_number}
+      </td>
+      <td class="py-3.5 px-4 sm:px-6 text-left">
+          <a href="mailto:${supplier.email}" class="text-blue-600 hover:underline font-medium">
+              ${supplier.email}
+          </a>
+      </td>
+      <td class="py-3.5 px-4 sm:px-6 text-left text-gray-500 font-medium">
+          ${addedLabel}
+      </td>
+      <td class="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
+          <div class="flex items-center justify-end space-x-1">
+              ${actionsHTML}
+          </div>
+      </td>
+    `;
+
+    // ---- Card (mobile) ----
+    const card = document.createElement("div");
+    card.className =
+      "p-4 flex flex-col gap-2.5 hover:bg-gray-50/80 transition group";
+    card.innerHTML = `
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="font-bold text-gray-900 group-hover:text-blue-600 transition truncate">
+              ${supplier.name}
+          </div>
+          <div class="text-[11px] text-gray-400 font-medium">ID: SUP-${supplier.id}</div>
         </div>
-        <div class="text-[11px] text-gray-400 font-medium">ID: SUP-${supplier.id}</div>
-    </td>
-
-    <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
-        ${supplier.contact_number}
-    </td>
-
-    <td class="py-3.5 px-4 sm:px-6 text-left">
-        <a href="mailto:${supplier.email}" class="text-blue-600 hover:underline font-medium">
-            ${supplier.email}
-        </a>
-    </td>
-
-    <td class="py-3.5 px-4 sm:px-6 text-left">
-       <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${badgeBg}">
-            ${statusText}
+        <span class="shrink-0 text-[11px] text-gray-400 font-medium">
+            Added ${addedLabel}
         </span>
-    </td>
+      </div>
 
-    <td class="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
-        <div class="flex items-center justify-end space-x-1">
-            <button title="Edit Supplier" class="edit-btn p-1.5 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition cursor-pointer">
-                <i data-lucide="pencil" class="w-4 h-4"></i>
-            </button>
-            <button title="Delete Supplier" class="delete-btn p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition cursor-pointer">
-                <i data-lucide="trash-2" class="w-4 h-4"></i>
-            </button>
+      <div class="text-xs sm:text-sm text-gray-600 space-y-1">
+        <div class="flex items-center gap-1.5">
+          <i data-lucide="phone" class="w-3.5 h-3.5 text-gray-400"></i>
+          <span class="font-medium">${supplier.contact_number}</span>
         </div>
-    </td>
-  `;
+        <div class="flex items-center gap-1.5">
+          <i data-lucide="mail" class="w-3.5 h-3.5 text-gray-400"></i>
+          <a href="mailto:${supplier.email}" class="text-blue-600 hover:underline font-medium truncate">
+              ${supplier.email}
+          </a>
+        </div>
+      </div>
 
-    // Bind Listeners
-    tr.querySelector(".edit-btn").addEventListener("click", () => {
-      openSupplierModal({ title: "Edit Supplier", supplier });
-    });
+      <div class="flex items-center justify-end gap-1 pt-1 border-t border-gray-100">
+          ${actionsHTML}
+      </div>
+    `;
 
-    tr.querySelector(".delete-btn").addEventListener("click", () => {
-      removeSupplier(supplier.id);
-    });
+    // Bind listeners on both
+    if (currentView === "archived") {
+      tr.querySelector(".restore-btn").addEventListener("click", () => {
+        restoreSupplierHandler(supplier.id);
+      });
+      card.querySelector(".restore-btn").addEventListener("click", () => {
+        restoreSupplierHandler(supplier.id);
+      });
+    } else {
+      tr.querySelector(".edit-btn").addEventListener("click", () => {
+        openSupplierModal({ title: "Edit Supplier", supplier });
+      });
+      tr.querySelector(".archive-btn").addEventListener("click", () => {
+        archiveSupplier(supplier.id);
+      });
+      card.querySelector(".edit-btn").addEventListener("click", () => {
+        openSupplierModal({ title: "Edit Supplier", supplier });
+      });
+      card.querySelector(".archive-btn").addEventListener("click", () => {
+        archiveSupplier(supplier.id);
+      });
+    }
 
     tbody.appendChild(tr);
+    cardList.appendChild(card);
   });
 
   if (window.lucide) {
@@ -293,7 +394,6 @@ if (addBtn) {
   });
 }
 
-// Helper function to build Add/Edit Modal dynamically
 // Helper function to build Add/Edit Modal dynamically
 function openSupplierModal({ title, supplier = null }) {
   openModal({
@@ -345,31 +445,6 @@ function openSupplierModal({ title, supplier = null }) {
         >
         <p class="error-msg text-xs text-rose-500 font-medium mt-1 hidden" id="error-email"></p>
       </div>
-
-      <div>
-        <label for="supplierStatus" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
-          Status <span class="text-red-500">*</span>
-        </label>
-        <div class="relative">
-          <select
-            id="supplierStatus"
-            name="status"
-            class="w-full appearance-none rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm font-medium text-slate-800 bg-white shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 pr-10 cursor-pointer"
-          >
-            <option value="1" ${!supplier || supplier.status === "active" || supplier.active == 1 ? "selected" : ""}>Active</option>
-            <option value="0" ${supplier && (supplier.status === "inactive" || supplier.active == 0) ? "selected" : ""}>Inactive</option>
-          </select>
-          
-          <!-- Custom Dropdown Chevron Icon -->
-          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400">
-            <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-            </svg>
-          </div>
-        </div>
-        
-      </div>
-
     </form>
   `,
 

@@ -55,15 +55,6 @@
                     </div>
                 </div>
 
-                <!-- Remember Me -->
-                <div class="flex items-center gap-2.5 pt-1">
-                    <input
-                        class="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 accent-slate-900 cursor-pointer"
-                        id="remember" name="remember" type="checkbox" />
-                    <label class="text-xs font-medium text-slate-700 cursor-pointer select-none" for="remember">
-                        Remember me on this device
-                    </label>
-                </div>
 
                 <!-- Submit Button -->
                 <button

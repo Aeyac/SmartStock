@@ -12,6 +12,8 @@ import {
   clearModalErrors,
 } from "./modalController.js";
 
+import { toastSuccess, toastError } from "./toastController.js";
+
 console.log("loaded");
 
 // ======================
@@ -48,11 +50,11 @@ async function loadLedger() {
 
       applyFilters();
     } else {
-      alert(result.message || "Failed to load stock ledger.");
+      toastError(result.message || "Failed to load stock ledger.");
     }
   } catch (error) {
     console.error(error);
-    alert("Unable to load stock ledger.");
+    toastError("Unable to load stock ledger.");
   }
 }
 
@@ -66,8 +68,15 @@ function applyFilters() {
     const matchesFilter =
       currentFilter === "all" || entry.type === currentFilter;
 
+    // Search by item name, numeric ID, or formatted ID (e.g. SL-123 or 123)
+    const entryId = String(entry.id || "").toLowerCase();
+    const formattedId = `sl-${entryId}`;
+
     const matchesSearch =
-      term === "" || entry.item_name?.toLowerCase().includes(term);
+      term === "" ||
+      entry.item_name?.toLowerCase().includes(term) ||
+      entryId.includes(term) ||
+      formattedId.includes(term);
 
     return matchesFilter && matchesSearch;
   });
@@ -111,9 +120,11 @@ filterBtns.forEach(({ el, value }) => {
 
 function renderLedger(entries, totalEntiresCount = 0) {
   const tbody = document.querySelector("#itemsTableBody");
-  if (!tbody) return;
+  const cardList = document.querySelector("#ledgerCardList");
+  if (!tbody || !cardList) return;
 
   tbody.innerHTML = "";
+  cardList.innerHTML = "";
 
   const showingCount = document.getElementById("showingCount");
   const totalCount = document.getElementById("totalCount");
@@ -122,19 +133,18 @@ function renderLedger(entries, totalEntiresCount = 0) {
   if (totalCount) totalCount.innerHTML = totalEntiresCount;
 
   if (entries.length === 0) {
-    tbody.innerHTML = `
-    <tr>
-      <td colspan="6" class="py-10 text-center text-gray-500">
-        <div class="flex flex-col items-center gap-2">
-          <i data-lucide="search-x" class="w-10 h-10 text-gray-300"></i>
-          <p class="text-base font-medium">No ledger entries found</p>
-          <p class="text-sm text-gray-400">
-            Try adjusting your search or filter.
-          </p>
-        </div>
-      </td>
-    </tr>
-  `;
+    const emptyHTML = `
+      <div class="flex flex-col items-center gap-2 py-10 text-center text-gray-500">
+        <i data-lucide="search-x" class="w-10 h-10 text-gray-300"></i>
+        <p class="text-base font-medium">No ledger entries found</p>
+        <p class="text-sm text-gray-400">
+          Try adjusting your search or filter.
+        </p>
+      </div>
+    `;
+
+    tbody.innerHTML = `<tr><td colspan="5" class="py-10 text-center text-gray-500">${emptyHTML}</td></tr>`;
+    cardList.innerHTML = emptyHTML;
 
     if (window.lucide) {
       lucide.createIcons();
@@ -157,6 +167,7 @@ function renderLedger(entries, totalEntiresCount = 0) {
     const qtyColor = isPositive ? "text-emerald-600" : "text-rose-600";
     const qtySign = isPositive ? "+" : "";
 
+    // ---- Table row (desktop) ----
     const tr = document.createElement("tr");
     tr.className = "hover:bg-gray-50/80 transition group";
 
@@ -185,10 +196,38 @@ function renderLedger(entries, totalEntiresCount = 0) {
     <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
         ${formatNumber(entry.balance_after)}
     </td>
+    `;
 
-  `;
+    // ---- Card (mobile) ----
+    const card = document.createElement("div");
+    card.className =
+      "p-4 flex flex-col gap-2.5 hover:bg-gray-50/80 transition group";
+    card.innerHTML = `
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="font-bold text-gray-900 group-hover:text-blue-600 transition truncate">
+              SL-${entry.id}
+          </div>
+          <div class="text-[11px] text-gray-400 font-medium">${entry.created_at}</div>
+        </div>
+        <span class="inline-flex items-center gap-1.5 shrink-0 text-xs font-semibold ${badgeBg}">
+            ${typeLabel}
+        </span>
+      </div>
+
+      <div class="flex items-center justify-between pt-1 border-t border-gray-100 text-sm">
+        <span class="text-gray-600 font-medium truncate">${entry.item_name}</span>
+        <span class="font-semibold ${qtyColor} shrink-0">${qtySign}${formatNumber(entry.quantity_change)}</span>
+      </div>
+
+      <div class="flex items-center justify-between text-xs text-gray-400 font-medium">
+        <span>Stock after</span>
+        <span class="text-gray-700 font-semibold">${formatNumber(entry.balance_after)}</span>
+      </div>
+    `;
 
     tbody.appendChild(tr);
+    cardList.appendChild(card);
   });
 
   if (window.lucide) {
@@ -212,7 +251,7 @@ async function openAdjustmentModal() {
     cachedItems = itemResult.status === "success" ? itemResult.items : [];
   } catch (error) {
     console.error(error);
-    alert("Unable to load items.");
+    toastError("Unable to load items.");
     return;
   }
 
@@ -338,15 +377,18 @@ async function saveAdjustment() {
     if (result.status === "error") {
       if (result.errors) {
         showModalErrors(result.errors);
+      } else if (result.message) {
+        toastError(result.message);
       }
       return;
     }
 
-    alert(result.message || "Adjustment recorded successfully!");
+    toastSuccess(result.message || "Adjustment recorded successfully!");
     closeModal();
     loadLedger();
   } catch (error) {
     console.error(error);
+    toastError("An unexpected error occurred while saving the adjustment.");
   }
 }
 

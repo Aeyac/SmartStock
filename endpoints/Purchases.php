@@ -73,11 +73,17 @@ switch ($method) {
 
             $id = (int) $_GET['id'];
 
-            $mydb->select('purchases', '*', ['id' => $id, 'user_id' => $userId]);
-            $purchase = $mydb->res ? $mydb->res->fetch_assoc() : null;
+            $stmt = $mydb->conn->prepare(
+                "SELECT p.*, s.name AS supplier_name FROM purchases p
+                INNER JOIN suppliers s ON s.id = p.supplier_id
+                WHERE p.id = ? AND p.user_id = ?"
+            );
+            $stmt->bind_param('ii', $id, $userId);
+            $stmt->execute();
+            $purchase = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
 
             if (!$purchase) {
-                http_response_code(404);
                 echo json_encode(['status' => 'error', 'message' => 'Purchase not found.']);
                 exit;
             }

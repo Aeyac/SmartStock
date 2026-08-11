@@ -30,6 +30,11 @@ if (!isset($_SESSION['user_id'])) {
     <div class="flex-1 flex flex-col min-w-0 min-h-screen">
         <?php require_once "partials/topbar.php" ?>
 
+        <div id="lowStockBanner"
+            class="hidden bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium rounded-xl px-4 py-3 flex items-center gap-2">
+            <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+            <span id="lowStockBannerText"></span>
+        </div>
         <!-- Page Body -->
         <main class="p-4 sm:p-6 md:p-8 space-y-6 max-w-7xl w-full mx-auto flex-1">
 
@@ -108,7 +113,7 @@ if (!isset($_SESSION['user_id'])) {
                             <h2 class="text-base font-bold text-gray-900">Low Stock Alerts</h2>
                             <p class="text-xs text-gray-500 mt-0.5">Immediate attention required</p>
                         </div>
-                        <a href="./items.php?filter=low_stock"
+                        <a href="./items.php"
                             class="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg px-3 py-1.5 transition">
                             <span>View Items</span>
                             <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>

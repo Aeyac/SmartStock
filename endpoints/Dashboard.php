@@ -21,140 +21,228 @@ if ($method !== 'GET') {
     exit;
 }
 
+// Figure out "today" from the server's clock.
 $currentYear = (int) date('Y');
-$currentMonth = (int) date('n');
+$currentMonth = (int) date('n'); // 1 = January, 12 = December
 
+// Figure out "last month" (handles January -> wraps back to December of last year)
 $prevMonth = $currentMonth - 1;
 $prevMonthYear = $currentYear;
+
 if ($prevMonth === 0) {
     $prevMonth = 12;
     $prevMonthYear = $currentYear - 1;
 }
 
-// Sums total_amount from purchases/sales for a single calendar month.
-function monthTotal($mydb, $table, $dateCol, $userId, $year, $month)
+
+// HELPER FUNCTIONS
+// (small reusable pieces used more than once below)
+
+// Adds up total_amount from either the "purchases" or "sales" table,
+// but only for rows that fall inside one specific month/year.
+function getMonthlyTotal($mydb, $tableName, $dateColumnName, $userId, $year, $month)
 {
-    $stmt = $mydb->conn->prepare(
-        "SELECT COALESCE(SUM(total_amount), 0) AS total FROM {$table}
-         WHERE user_id = ? AND YEAR({$dateCol}) = ? AND MONTH({$dateCol}) = ?"
-    );
+    $sql = "SELECT COALESCE(SUM(total_amount), 0) AS total 
+            FROM {$tableName}
+            WHERE user_id = ? 
+              AND YEAR({$dateColumnName}) = ? 
+              AND MONTH({$dateColumnName}) = ?";
+
+    $stmt = $mydb->conn->prepare($sql);
     $stmt->bind_param('iii', $userId, $year, $month);
     $stmt->execute();
-    $total = (float) $stmt->get_result()->fetch_assoc()['total'];
+
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
     $stmt->close();
-    return $total;
+
+    return (float) $row['total'];
 }
 
-// Percent change vs previous month. Returns null when there's no baseline
-// to compare against (previous month was zero) — a hardcoded "+100%" in
-// that case would be misleading, especially for a value like Net Profit
-// that can be negative. The frontend shows a neutral "New" tag instead.
-function pctChange($current, $previous)
+// Works out the percentage change between this month and last month.
+//
+// Special case: if last month was 0, we CANNOT calculate a real
+// percentage (that would be dividing by zero). Instead we return NULL,
+// and the frontend shows a "New" label instead of a fake percentage.
+function calculatePercentChange($currentValue, $previousValue)
 {
-    if ($previous == 0) {
-        return $current == 0 ? 0.0 : null;
+    if ($previousValue == 0) {
+        if ($currentValue == 0) {
+            return 0.0; // nothing then, nothing now = 0% change
+        }
+        return null; // no baseline to compare against = "New"
     }
-    return (($current - $previous) / abs($previous)) * 100;
+
+    $difference = $currentValue - $previousValue;
+    $percent = ($difference / abs($previousValue)) * 100;
+
+    return $percent;
 }
 
-function roundOrNull($value, $precision = 1)
+// Rounds a number to 1 decimal place, UNLESS it's null (in which case
+// we just leave it as null so it can still become "New" on the frontend).
+function roundIfNotNull($value)
 {
-    return $value === null ? null : round($value, $precision);
+    if ($value === null) {
+        return null;
+    }
+    return round($value, 1);
 }
 
-// ======================
-// Stat Cards
-// ======================
-$monthlySpend = monthTotal($mydb, 'purchases', 'purchase_date', $userId, $currentYear, $currentMonth);
-$prevSpend = monthTotal($mydb, 'purchases', 'purchase_date', $userId, $prevMonthYear, $prevMonth);
 
-$monthlyRevenue = monthTotal($mydb, 'sales', 'sale_date', $userId, $currentYear, $currentMonth);
-$prevRevenue = monthTotal($mydb, 'sales', 'sale_date', $userId, $prevMonthYear, $prevMonth);
+// =======================================================================
+// STEP 1: STAT CARDS (Monthly Spend, Monthly Revenue, Net Profit)
+// =======================================================================
 
+$monthlySpend = getMonthlyTotal($mydb, 'purchases', 'purchase_date', $userId, $currentYear, $currentMonth);
+$lastMonthSpend = getMonthlyTotal($mydb, 'purchases', 'purchase_date', $userId, $prevMonthYear, $prevMonth);
+
+$monthlyRevenue = getMonthlyTotal($mydb, 'sales', 'sale_date', $userId, $currentYear, $currentMonth);
+$lastMonthRevenue = getMonthlyTotal($mydb, 'sales', 'sale_date', $userId, $prevMonthYear, $prevMonth);
+
+// Net Profit = money earned from sales MINUS money spent on purchases,
+// for this month only. (This is a simple "cash flow" view, not full
+// accounting profit — we're not tracking which exact items were sold
+// vs which were just bought and are still sitting in stock.)
 $netProfit = $monthlyRevenue - $monthlySpend;
-$prevNetProfit = $prevRevenue - $prevSpend;
+$lastMonthNetProfit = $lastMonthRevenue - $lastMonthSpend;
+
+$spendChangePercent = calculatePercentChange($monthlySpend, $lastMonthSpend);
+$revenueChangePercent = calculatePercentChange($monthlyRevenue, $lastMonthRevenue);
+$netProfitChangePercent = calculatePercentChange($netProfit, $lastMonthNetProfit);
 
 $stats = [
     'monthly_spend' => round($monthlySpend, 2),
-    'monthly_spend_change_pct' => roundOrNull(pctChange($monthlySpend, $prevSpend)),
+    'monthly_spend_change_pct' => roundIfNotNull($spendChangePercent),
+
     'monthly_revenue' => round($monthlyRevenue, 2),
-    'monthly_revenue_change_pct' => roundOrNull(pctChange($monthlyRevenue, $prevRevenue)),
+    'monthly_revenue_change_pct' => roundIfNotNull($revenueChangePercent),
+
     'net_profit' => round($netProfit, 2),
-    'net_profit_change_pct' => roundOrNull(pctChange($netProfit, $prevNetProfit)),
+    'net_profit_change_pct' => roundIfNotNull($netProfitChangePercent),
 ];
 
-// ======================
-// Performance Trends (Jan - Dec, current year)
-// ======================
+
+// STEP 2: PERFORMANCE TRENDS CHART (Jan - Dec, this year)
+
 $monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-$spendByMonth = array_fill(1, 12, 0.0);
-$salesByMonth = array_fill(1, 12, 0.0);
+// Start with all 12 months set to 0. We'll fill in real numbers next.
+// (Using month number 1-12 as the array key, so $spendByMonth[3] = March.)
+$spendByMonth = [];
+$salesByMonth = [];
 
+for ($month = 1; $month <= 12; $month++) {
+    $spendByMonth[$month] = 0.0;
+    $salesByMonth[$month] = 0.0;
+}
+
+// --- Get purchase totals grouped by month ---
 $stmt = $mydb->conn->prepare(
-    "SELECT MONTH(purchase_date) AS m, SUM(total_amount) AS total FROM purchases
+    "SELECT MONTH(purchase_date) AS month_number, SUM(total_amount) AS total 
+     FROM purchases
      WHERE user_id = ? AND YEAR(purchase_date) = ?
      GROUP BY MONTH(purchase_date)"
 );
 $stmt->bind_param('ii', $userId, $currentYear);
 $stmt->execute();
 $result = $stmt->get_result();
+
+// Loop through each row the database gave us and slot it into the right month.
 while ($row = $result->fetch_assoc()) {
-    $spendByMonth[(int) $row['m']] = (float) $row['total'];
+    $monthNumber = (int) $row['month_number'];
+    $spendByMonth[$monthNumber] = (float) $row['total'];
 }
 $stmt->close();
 
+// --- Get sales totals grouped by month (same idea as above) ---
 $stmt = $mydb->conn->prepare(
-    "SELECT MONTH(sale_date) AS m, SUM(total_amount) AS total FROM sales
+    "SELECT MONTH(sale_date) AS month_number, SUM(total_amount) AS total 
+     FROM sales
      WHERE user_id = ? AND YEAR(sale_date) = ?
      GROUP BY MONTH(sale_date)"
 );
 $stmt->bind_param('ii', $userId, $currentYear);
 $stmt->execute();
 $result = $stmt->get_result();
+
 while ($row = $result->fetch_assoc()) {
-    $salesByMonth[(int) $row['m']] = (float) $row['total'];
+    $monthNumber = (int) $row['month_number'];
+    $salesByMonth[$monthNumber] = (float) $row['total'];
 }
 $stmt->close();
 
+// Turn our 1-12 indexed arrays into plain 0-11 indexed lists (what
+// JavaScript/Chart.js expects), in Jan -> Dec order.
+$spendList = [];
+$salesList = [];
+
+for ($month = 1; $month <= 12; $month++) {
+    $spendList[] = round($spendByMonth[$month], 2);
+    $salesList[] = round($salesByMonth[$month], 2);
+}
+
 $trends = [
     'months' => $monthLabels,
-    'spend' => array_values(array_map(fn($v) => round($v, 2), $spendByMonth)),
-    'sales' => array_values(array_map(fn($v) => round($v, 2), $salesByMonth)),
+    'spend' => $spendList,
+    'sales' => $salesList,
 ];
 
-// ======================
-// Low Stock Alerts (stock <= safety_stock, includes fully out-of-stock items)
-// ======================
+
+// =======================================================================
+// STEP 3: LOW STOCK ALERTS
+// =======================================================================
+// An item counts as "low stock" once its current stock drops to or below
+// its own safety_stock threshold (set per-item in the items table).
+
 $stmt = $mydb->conn->prepare(
-    "SELECT id, name, stock, safety_stock FROM items
+    "SELECT id, name, stock, safety_stock 
+     FROM items
      WHERE user_id = ? AND deleted_at IS NULL AND stock <= safety_stock
      ORDER BY stock ASC
      LIMIT 10"
 );
 $stmt->bind_param('i', $userId);
 $stmt->execute();
-$lowStockRows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$result = $stmt->get_result();
+$lowStockRows = $result->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-$lowStock = array_map(function ($item) {
-    return [
-        'id' => (int) $item['id'],
-        'name' => $item['name'],
-        // NOTE: items has no real SKU column. This is a synthetic
-        // placeholder derived from the id purely so the UI has something to
-        // show where the mockup expects one. Replace this if a real `sku`
-        // column gets added to the items table later.
-        'sku' => 'SKU-' . str_pad((string) $item['id'], 4, '0', STR_PAD_LEFT),
-        'stock' => (int) $item['stock'],
-        'safety_stock' => (int) $item['safety_stock'],
-        'status' => ((int) $item['stock'] === 0) ? 'out' : 'low',
-    ];
-}, $lowStockRows);
+// Build the final low_stock list one item at a time.
+$lowStock = [];
 
-// ======================
-// Best Selling (this month, ranked two ways from the same underlying data)
-// ======================
+foreach ($lowStockRows as $item) {
+    $itemId = (int) $item['id'];
+    $stock = (int) $item['stock'];
+    $safetyStock = (int) $item['safety_stock'];
+
+    // The items table doesn't actually have a SKU column, so we make a
+    // fake-but-consistent one from the item's ID just so the UI has
+    // something to display (e.g. id 7 -> "SKU-0007").
+    $fakeSku = 'SKU-' . str_pad((string) $itemId, 4, '0', STR_PAD_LEFT);
+
+    // Decide the status label: completely out, or just running low.
+    if ($stock === 0) {
+        $status = 'out';
+    } else {
+        $status = 'low';
+    }
+
+    $lowStock[] = [
+        'id' => $itemId,
+        'name' => $item['name'],
+        'sku' => $fakeSku,
+        'stock' => $stock,
+        'safety_stock' => $safetyStock,
+        'status' => $status,
+    ];
+}
+
+
+// =======================================================================
+// STEP 4: BEST SELLING ITEMS (this month), ranked two ways
+// =======================================================================
+
 $stmt = $mydb->conn->prepare(
     "SELECT si.item_id, i.name, SUM(si.quantity) AS qty, SUM(si.subtotal) AS revenue
      FROM sale_items si
@@ -165,28 +253,55 @@ $stmt = $mydb->conn->prepare(
 );
 $stmt->bind_param('iii', $userId, $currentYear, $currentMonth);
 $stmt->execute();
-$sellingRows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);    
+$result = $stmt->get_result();
+$sellingRows = $result->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-$byQuantity = $sellingRows;
-usort($byQuantity, fn($a, $b) => $b['qty'] <=> $a['qty']);
+// Turn each raw database row into a clean array we can sort and reuse.
+$sellingItems = [];
+
+foreach ($sellingRows as $row) {
+    $sellingItems[] = [
+        'item_id' => (int) $row['item_id'],
+        'name' => $row['name'],
+        'quantity_sold' => (int) $row['qty'],
+        'revenue' => round((float) $row['revenue'], 2),
+    ];
+}
+
+// --- Make a copy sorted by QUANTITY SOLD, highest first ---
+$byQuantity = $sellingItems; // copy the array so sorting one doesn't affect the other
+
+usort($byQuantity, function ($itemA, $itemB) {
+    // Returning a negative number means "itemA comes first"
+    return $itemB['quantity_sold'] - $itemA['quantity_sold'];
+});
+
+// Only keep the top 5
 $byQuantity = array_slice($byQuantity, 0, 5);
 
-$byRevenue = $sellingRows;
-usort($byRevenue, fn($a, $b) => $b['revenue'] <=> $a['revenue']);
+// --- Make a copy sorted by REVENUE, highest first ---
+$byRevenue = $sellingItems;
+
+usort($byRevenue, function ($itemA, $itemB) {
+    if ($itemA['revenue'] == $itemB['revenue']) {
+        return 0;
+    }
+    // Sort descending (biggest revenue first)
+    return ($itemA['revenue'] < $itemB['revenue']) ? 1 : -1;
+});
+
 $byRevenue = array_slice($byRevenue, 0, 5);
 
-$formatSelling = fn($rows) => array_values(array_map(fn($r) => [
-    'item_id' => (int) $r['item_id'],
-    'name' => $r['name'],
-    'quantity_sold' => (int) $r['qty'],
-    'revenue' => round((float) $r['revenue'], 2),
-], $rows));
-
 $bestSelling = [
-    'by_quantity' => $formatSelling($byQuantity),
-    'by_revenue' => $formatSelling($byRevenue),
+    'by_quantity' => $byQuantity,
+    'by_revenue' => $byRevenue,
 ];
+
+
+// =======================================================================
+// STEP 5: SEND EVERYTHING BACK AS ONE JSON RESPONSE
+// =======================================================================
 
 echo json_encode([
     'status' => 'success',

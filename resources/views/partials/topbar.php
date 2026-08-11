@@ -10,23 +10,16 @@
 
     <!-- SHARED / DESKTOP RIGHT SIDE: Notifications & Profile -->
     <div class="flex items-center space-x-4 lg:space-x-6">
-        <!-- Desktop Bell (Hidden on mobile/tablet) -->
-        <button class="hidden lg:block text-gray-500 hover:text-gray-700 relative cursor-pointer">
-            <i data-lucide="bell" class="w-5 h-5"></i>
-            <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-        </button>
-
-        <div class="hidden lg:block h-6 w-px bg-gray-200"></div>
 
         <!-- User Info -->
         <div class="flex items-center space-x-3">
             <!-- Desktop Text Meta (Hidden on mobile/tablet) -->
-            <div class="hidden lg:block text-right">
+            <div class="block text-right">
                 <div class="text-sm font-bold text-gray-900 leading-tight">
                     <span><?= htmlspecialchars($_SESSION['user_name'] ?? 'Guest'); ?></span>
                 </div>
                 <div class="text-xs text-gray-400 font-medium tracking-wider">
-                    SUPER ADMIN
+                    ADMIN
                 </div>
             </div>
 

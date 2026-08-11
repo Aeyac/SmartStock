@@ -302,5 +302,24 @@ function renderBestSelling() {
   });
 }
 
+function renderLowStockBanner(lowStockItems) {
+  const banner = document.getElementById("lowStockBanner");
+  const text = document.getElementById("lowStockBannerText");
+  if (!banner || !text) return;
+
+  if (lowStockItems.length === 0) {
+    banner.classList.add("hidden");
+    return;
+  }
+
+  text.innerHTML = `${lowStockItems.length} item(s) low on stock: ${lowStockItems
+    .map((i) => i.name)
+    .slice(0, 3)
+    .join(", ")}${lowStockItems.length > 3 ? "..." : ""}`;
+  banner.classList.remove("hidden");
+  if (window.lucide) lucide.createIcons();
+}
+
 // Initialize on load
 loadDashboard();
+renderLowStockBanner();

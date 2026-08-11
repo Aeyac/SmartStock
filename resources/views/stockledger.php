@@ -42,20 +42,6 @@ if (!isset($_SESSION['user_id'])) {
 
                 <!-- Controls: Stat Counter + Primary Button -->
                 <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-                    <!-- <div
-                        class="flex justify-around bg-white border border-gray-200 rounded-xl px-4 py-2 divide-x divide-gray-200 shadow-sm">
-                        <div class="pr-4 sm:pr-6 text-center sm:text-left">
-                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">TOTAL
-                                ITEMS</span>
-                            <span id="totalItems" class="text-base sm:text-lg font-bold text-gray-900">0</span>
-                        </div>
-                        <div class="pl-4 sm:pl-6 text-center sm:text-left">
-                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">LOW STOCK
-                                ALERTS</span>
-                            <span id="totalLowStock" class="text-base sm:text-lg font-bold text-amber-600">0</span>
-                        </div>
-                    </div> -->
-
                     <button id="addBtn"
                         class="bg-black text-white px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center space-x-2 hover:bg-gray-800 transition shadow-sm active:scale-95 cursor-pointer">
                         <i data-lucide="plus" class="w-4 h-4"></i>
@@ -99,44 +85,32 @@ if (!isset($_SESSION['user_id'])) {
                     </div>
                 </div>
 
-                <!-- Table View -->
-                <div class="max-h-[500px] overflow-y-auto overflow-x-auto">
+                <!-- Table View (desktop) -->
+                <div class="hidden md:block max-h-[500px] overflow-y-auto overflow-x-auto">
                     <table id="itemsTable" class="w-full min-w-[700px] border-collapse">
                         <thead class="sticky top-0 bg-gray-50 z-10">
                             <tr
                                 class="bg-gray-50 border-b border-gray-200 text-[11px] font-bold tracking-wider text-gray-500 uppercase select-none">
 
-                                <!-- Column 1 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-left cursor-pointer hover:text-gray-800 transition">
-                                    <div class="flex items-center space-x-1">
-                                        <span>TRANSACTION ID</span>
-                                        <i data-lucide="arrow-up-down" class="w-3 h-3 text-gray-400"></i>
-                                    </div>
+                                    <span>TRANSACTION ID</span>
                                 </th>
-
-                                <!-- Column 2 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-left">MOVEMENT TYPE</th>
-
-                                <!-- <th class="py-3.5 px-4 sm:px-6 text-left">REFERENCE ID</th> -->
-
                                 <th class="py-3.5 px-4 sm:px-6 text-left">ITEM NAME</th>
-
-                                <!-- Column 4 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-left">QUANTITY CHANGE</th>
-
-                                <!-- Column 5 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-left">STOCK AFTER</th>
-
-                                <!-- Column 6 Header -->
                             </tr>
                         </thead>
                         <tbody id="itemsTableBody" class="divide-y divide-gray-100 text-xs sm:text-sm">
-                            <!-- Populated dynamically by itemsController.js -->
+                            <!-- Populated dynamically by stockledgerController.js -->
                         </tbody>
                     </table>
                 </div>
 
-                <!-- Table Footer / Pagination -->
+                <!-- Card View (mobile) -->
+                <div id="ledgerCardList" class="md:hidden max-h-[500px] overflow-y-auto divide-y divide-gray-100">
+                </div>
+
                 <div
                     class="p-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500 font-medium">
                     <div>
@@ -146,9 +120,7 @@ if (!isset($_SESSION['user_id'])) {
                         ledgers
                     </div>
                 </div>
-
             </div>
-
         </main>
     </div>
 

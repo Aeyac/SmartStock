@@ -13,6 +13,8 @@ import {
   clearModalErrors,
 } from "./modalController.js";
 
+import { toastSuccess, toastError, confirmToast } from "./toastController.js";
+
 // import { fetchSuppliers } from "../api/suppliersApi.js";
 
 console.log("Items controller loaded");
@@ -83,10 +85,11 @@ async function loadItems() {
 
       applyFilters();
     } else {
-      alert(result?.message || "Failed to load items.");
+      toastError(result?.message || "Failed to load items.");
     }
   } catch (error) {
     console.error("Error loading items:", error);
+    toastError("Unable to connect to the server.");
   }
 }
 
@@ -100,8 +103,8 @@ function applyFilters() {
     const matchesSearch =
       term === "" ||
       item.name.toLowerCase().includes(term) ||
-      (item.category_name && item.category_name.toLowerCase().includes(term)) 
-      // || (item.supplier_name && item.supplier_name.toLowerCase().includes(term));
+      (item.category_name && item.category_name.toLowerCase().includes(term));
+    // || (item.supplier_name && item.supplier_name.toLowerCase().includes(term));
 
     const matchesFilter =
       currentFilter === "all" ||
@@ -297,34 +300,43 @@ async function saveItem(id = null) {
       if (result.errors) {
         showModalErrors(result.errors);
       } else {
-        alert(result.message || "Failed to save item.");
+        toastError(result.message || "Failed to save item.");
       }
       return;
     }
 
-    alert(result.message || "Saved successfully!");
+    toastSuccess(result.message || "Saved successfully!");
     closeModal();
     loadItems();
   } catch (error) {
     console.error(error);
+    toastError("An error occurred while saving the item.");
   }
 }
 
 async function removeItem(id) {
-  if (!confirm("Are you sure you want to delete this item?")) return;
+  const confirmed = await confirmToast({
+    title: "Delete Item?",
+    message:
+      "Are you sure you want to delete this item? This action cannot be undone.",
+    confirmText: "Delete",
+    danger: true,
+  });
+
+  if (!confirmed) return;
 
   try {
     const result = await deleteItem(id);
 
     if (result && result.status === "success") {
-      alert(result.message || "Item deleted successfully.");
+      toastSuccess(result.message || "Item deleted successfully.");
       loadItems();
     } else {
-      alert(result.message || "Failed to delete item.");
+      toastError(result.message || "Failed to delete item.");
     }
   } catch (error) {
     console.error(error);
-    alert("An error occurred while deleting.");
+    toastError("An error occurred while deleting.");
   }
 }
 

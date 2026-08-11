@@ -1,4 +1,5 @@
 <?php
+
 session_start();
 
 require_once "../db.php";
@@ -6,26 +7,43 @@ require_once "../utils/Utility.php";
 
 header('Content-Type: application/json; charset=utf-8');
 
+// ==================================================
+// Authentication
+// ==================================================
+
 if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
+
     echo json_encode([
         'status' => 'error',
         'message' => 'Not authenticated.'
     ]);
+
     exit;
 }
 
 $userId = $_SESSION['user_id'];
-// $userId = 1;
+
 $mydb = new myDB();
 
 $method = $_SERVER['REQUEST_METHOD'];
 
+
+// ==================================================
+// Request Handler
+// ==================================================
+
 switch ($method) {
 
-    // GET - List Suppliers
+    // ==================================================
+    // GET - List Suppliers (active + archived together)
+    // Filtering by archive status is handled client-side, the same
+    // pattern already used for the stock ledger — one fetch, filtered
+    // in JS, instead of separate active/archived endpoints.
+    // ==================================================
 
     case 'GET':
+
         $mydb->select('suppliers', '*', [
             'user_id' => $userId
         ]);
@@ -38,20 +56,40 @@ switch ($method) {
             'status' => 'success',
             'suppliers' => $suppliers
         ]);
+
         break;
 
 
+    // ==================================================
+    // POST - Create Supplier
+    // ==================================================
 
-    //POST - Create Supplier
     case 'POST':
-        $input = json_decode(file_get_contents('php://input'), true) ?? [];
-        $validation = validateSupplierInput($mydb, $userId, $input);
+
+        $input = json_decode(
+            file_get_contents('php://input'),
+            true
+        ) ?? [];
+
+        // NOTE: duplicate checking (e.g. email uniqueness) happens inside
+        // validateSupplierInput() in Utility.php. That check needs to be
+        // widened to also match archived suppliers (deleted_at IS NOT
+        // NULL), the same way Categories.php checks both active AND
+        // archived categories — otherwise re-creating a supplier whose
+        // name/email was already archived will crash at the database's
+        // unique constraint instead of returning a clean validation error.
+        $validation = validateSupplierInput(
+            $mydb,
+            $userId,
+            $input
+        );
 
         if (!$validation['isValid']) {
             echo json_encode([
                 'status' => 'error',
                 'errors' => $validation['errors']
             ]);
+
             exit;
         }
 
@@ -65,45 +103,78 @@ switch ($method) {
             'active' => $validData['status']
         ]);
 
+        if (!$id) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Failed to create supplier.'
+            ]);
+
+            exit;
+        }
+
         echo json_encode([
             'status' => 'success',
             'message' => 'Supplier created successfully.',
             'id' => $id
         ]);
+
         break;
 
 
+    // ==================================================
+    // PUT - Update Supplier (active suppliers only)
+    // ==================================================
 
-    // PUT - Update Supplier
     case 'PUT':
+
         $id = (int) ($_GET['id'] ?? 0);
 
-        // Verify existence first
-        $mydb->select('suppliers', 'id', [
+        // Verify supplier exists first
+        $mydb->select('suppliers', '*', [
             'id' => $id,
             'user_id' => $userId
         ]);
 
-        if (!$mydb->res || !$mydb->res->fetch_assoc()) {
-            http_response_code(404);
+        $supplier = $mydb->res ? $mydb->res->fetch_assoc() : null;
+
+        if (!$supplier) {
             echo json_encode([
                 'status' => 'error',
                 'message' => 'Supplier not found.'
             ]);
+
             exit;
         }
 
-        $input = json_decode(file_get_contents('php://input'), true) ?? [];
+        if ($supplier['deleted_at'] !== null) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'This supplier is archived. Restore it before editing.'
+            ]);
 
-        // Pass current $id so email uniqueness check ignores the record being updated
-        $validation = validateSupplierInput($mydb, $userId, $input, $id);
+            exit;
+        }
+
+        $input = json_decode(
+            file_get_contents('php://input'),
+            true
+        ) ?? [];
+
+        // Pass current ID so the email uniqueness
+        // check ignores the supplier being updated
+        $validation = validateSupplierInput(
+            $mydb,
+            $userId,
+            $input,
+            $id
+        );
 
         if (!$validation['isValid']) {
-            http_response_code(422);
             echo json_encode([
                 'status' => 'error',
                 'errors' => $validation['errors']
             ]);
+
             exit;
         }
 
@@ -127,25 +198,31 @@ switch ($method) {
             'status' => 'success',
             'message' => 'Supplier updated successfully.'
         ]);
+
         break;
 
 
-
-    // DELETE - Delete Supplier
+    // ==================================================
+    // DELETE - Archive Supplier (soft delete)
+    // ==================================================
+    // No more "is this supplier used by any items" check here — that
+    // check only mattered for a PERMANENT delete, which could break the
+    // foreign key on items.supplier_id. Archiving never removes the row,
+    // so there's nothing for that foreign key to lose.
+    // ==================================================
 
     case 'DELETE':
 
         $id = (int) ($_GET['id'] ?? 0);
 
+        // Verify supplier exists and isn't already archived
         $mydb->select('suppliers', 'id', [
             'id' => $id,
-            'user_id' => $userId
+            'user_id' => $userId,
+            'deleted_at' => null
         ]);
 
         if (!$mydb->res || !$mydb->res->fetch_assoc()) {
-
-            http_response_code(404);
-
             echo json_encode([
                 'status' => 'error',
                 'message' => 'Supplier not found.'
@@ -154,18 +231,77 @@ switch ($method) {
             exit;
         }
 
-        $mydb->delete('suppliers', [
-            'id' => $id,
-            'user_id' => $userId
-        ]);
+        $mydb->update(
+            'suppliers',
+            ['deleted_at' => date('Y-m-d H:i:s')],
+            ['id' => $id, 'user_id' => $userId]
+        );
 
         echo json_encode([
             'status' => 'success',
-            'message' => 'Supplier deleted successfully.'
+            'message' => 'Supplier archived successfully.'
         ]);
 
         break;
 
+
+    // ==================================================
+    // PATCH - Restore an archived Supplier (clears deleted_at)
+    // ==================================================
+
+    case 'PATCH':
+
+        $id = (int) ($_GET['id'] ?? 0);
+
+        $stmt = $mydb->conn->prepare("
+            SELECT * FROM suppliers
+            WHERE id = ? AND user_id = ? AND deleted_at IS NOT NULL
+        ");
+        $stmt->bind_param('ii', $id, $userId);
+        $stmt->execute();
+        $supplier = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$supplier) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Archived supplier not found.'
+            ]);
+
+            exit;
+        }
+
+        // Restoring shouldn't silently create a duplicate — if a new
+        // active supplier has since taken this email, block the restore.
+        // NOTE: adjust the matched column(s) here to mirror whatever
+        // validateSupplierInput() actually treats as the unique field.
+        $mydb->select('suppliers', 'id', [
+            'email' => $supplier['email'],
+            'user_id' => $userId,
+            'deleted_at' => null
+        ]);
+
+        if ($mydb->res && $mydb->res->fetch_assoc()) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'An active supplier with this email already exists. Resolve that first before restoring.'
+            ]);
+
+            exit;
+        }
+
+        $mydb->update(
+            'suppliers',
+            ['deleted_at' => null],
+            ['id' => $id, 'user_id' => $userId]
+        );
+
+        echo json_encode([
+            'status' => 'success',
+            'message' => 'Supplier restored successfully.'
+        ]);
+
+        break;
 
 
     default:
@@ -177,4 +313,5 @@ switch ($method) {
             'message' => 'Method Not Allowed.'
         ]);
 
+        break;
 }
