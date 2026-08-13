@@ -1,9 +1,12 @@
 import { apiRequest } from "../../fetchApi.js";
 const BASE_URL = "/smart_stock/endpoints/Items.php";
 
-export function fetchItems(lowStock = false) {
-  const url = lowStock ? `${BASE_URL}?low_stock=1` : BASE_URL;
-  return apiRequest(url, { method: "GET" });
+export function fetchItems() {
+  return apiRequest(BASE_URL, { method: "GET" });
+}
+
+export function fetchDeletedItems() {
+  return apiRequest(`${BASE_URL}?trashed=1`, { method: "GET" });
 }
 
 export function createItem(name, category_id, safety_stock, selling_price) {
@@ -38,10 +41,8 @@ export function deleteItem(id) {
   });
 }
 
-// export function fetchItems() {
-//   return apiRequest(ITEMS_URL);
-// }
-
-// export function fetchLowStockItems() {
-//   return apiRequest(`${ITEMS_URL}?low_stock=1`);
-// }
+export function restoreItem(id) {
+  return apiRequest(`${BASE_URL}?id=${id}`, {
+    method: "PATCH",
+  });
+}

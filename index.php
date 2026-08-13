@@ -5,16 +5,16 @@
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>SmartStock - Sign In</title>
-    <!-- Fonts & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
-        rel="stylesheet" />
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- Local Tailwind CSS -->
     <link href="./src/output.css" rel="stylesheet" />
 </head>
 
 <body
-    class="bg-slate-50 font-sans text-slate-900 antialiased min-h-screen flex flex-col justify-between relative overflow-x-hidden">
+    class="bg-slate-50 text-slate-900 antialiased min-h-screen flex flex-col justify-between relative overflow-x-hidden">
 
     <?php require_once "./resources/views/partials/background.php" ?>
     <?php require_once "./resources/views/partials/header.php" ?>
@@ -43,18 +43,17 @@
                     <div class="flex justify-between items-center">
                         <label class="text-xs font-semibold text-slate-700" for="password">Password</label>
                     </div>
-                    <div class="relative">
+                    <div class="relative flex items-center">
                         <input
                             class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900 transition-all duration-200 pr-10"
                             id="password" name="password" required type="password" />
                         <button
-                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 transition-colors"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 transition-colors flex items-center justify-center"
                             id="passwordBtn" type="button">
-                            <span class="material-symbols-outlined text-[18px]" id="passwordIcon">visibility</span>
+                            <i data-lucide="eye" class="w-[18px] h-[18px]" id="passwordIcon"></i>
                         </button>
                     </div>
                 </div>
-
 
                 <!-- Submit Button -->
                 <button

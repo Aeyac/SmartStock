@@ -77,9 +77,7 @@ async function saveSupplier(id = null) {
   }
 }
 
-// ======================
 // Archive / Restore
-// ======================
 async function archiveSupplier(id) {
   const confirmed = await confirmToast({
     title: "Archive this supplier?",

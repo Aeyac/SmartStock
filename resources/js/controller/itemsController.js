@@ -1,8 +1,10 @@
 import {
   fetchItems,
+  fetchDeletedItems,
   createItem,
   updateItem,
   deleteItem,
+  restoreItem,
 } from "../api/itemsApi.js";
 import { fetchCategories } from "../api/categoriesApi.js";
 
@@ -15,200 +17,321 @@ import {
 
 import { toastSuccess, toastError, confirmToast } from "./toastController.js";
 
-// import { fetchSuppliers } from "../api/suppliersApi.js";
-
 console.log("Items controller loaded");
 
 // State
 let allItems = [];
+let archivedItems = [];
 let categoriesList = [];
-let suppliersList = [];
 let currentSearch = "";
-let currentFilter = "all"; // 'all' or 'low_stock'
+let currentFilter = "all"; // 'all' | 'low_stock' | 'archived'
 
-// Helper to safely trigger Lucide icon rendering
-function refreshIcons() {
-  if (window.lucide && typeof window.lucide.createIcons === "function") {
-    window.lucide.createIcons();
-  }
-}
-
-// ======================
 // Load Categories & Items
-// ======================
 async function init() {
-  await Promise.all([loadCategories(), loadItems()]); // loadSuppliers()
+  await Promise.all([loadCategories(), loadItems()]);
   setupEventListeners();
-  refreshIcons();
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
 }
 
 async function loadCategories() {
   try {
     const result = await fetchCategories();
+
     if (result && result.status === "success") {
-      categoriesList = result.categories || result.data || [];
+      categoriesList = result.categories.filter((c) => c.deleted_at === null);
     }
   } catch (error) {
-    console.error("Error loading categories:", error);
+    console.error(error);
+    toastError("Failed to load categories.", "Categories");
   }
 }
-
-// async function loadSuppliers() {
-//   try {
-//     const result = await fetchSuppliers();
-//     if (result && result.status === "success") {
-//       suppliersList = result.suppliers || result.data || [];
-//     }
-//   } catch (error) {
-//     console.error("Error loading suppliers:", error);
-//   }
-// }
 
 async function loadItems() {
   try {
     const result = await fetchItems();
 
-    console.log(result);
     const totalEl = document.getElementById("totalItems");
     const lowStockEl = document.getElementById("totalLowStock");
 
     if (result && result.status === "success") {
       allItems = result.items;
 
-      // Update Header Stats
-      if (totalEl) totalEl.textContent = allItems.length;
+      // Total number of items
+      if (totalEl) {
+        totalEl.textContent = allItems.length;
+      }
 
+      // Low stock = stock is BELOW safety stock
       const lowStockCount = allItems.filter(
-        (item) => Number(item.stock) <= Number(item.safety_stock),
+        (item) => Number(item.stock) < Number(item.safety_stock),
       ).length;
-      if (lowStockEl) lowStockEl.textContent = lowStockCount;
+
+      if (lowStockEl) {
+        lowStockEl.textContent = lowStockCount;
+      }
 
       applyFilters();
     } else {
       toastError(result?.message || "Failed to load items.");
     }
   } catch (error) {
-    console.error("Error loading items:", error);
-    toastError("Unable to connect to the server.");
+    console.error(error);
+    toastError("Failed to load items.", "Items");
   }
 }
 
-// ======================
+async function loadArchivedItems() {
+  try {
+    const result = await fetchDeletedItems();
+
+    if (result && result.status === "success") {
+      archivedItems = result.items;
+      applyFilters();
+    } else {
+      toastError(result?.message || "Failed to load archived items.");
+    }
+  } catch (error) {
+    console.error(error);
+    toastError("Failed to load archived items.", "Items");
+  }
+}
+
 // Filtering & Render Logic
-// ======================
 function applyFilters() {
   const term = currentSearch.trim().toLowerCase();
+
+  // Archived view has its own source array and no low-stock concept
+  if (currentFilter === "archived") {
+    const filtered = archivedItems.filter((item) => {
+      return (
+        term === "" ||
+        item.name.toLowerCase().includes(term) ||
+        (item.category_name && item.category_name.toLowerCase().includes(term))
+      );
+    });
+
+    renderItems(filtered, filtered.length, { archived: true });
+    return;
+  }
 
   const filtered = allItems.filter((item) => {
     const matchesSearch =
       term === "" ||
       item.name.toLowerCase().includes(term) ||
       (item.category_name && item.category_name.toLowerCase().includes(term));
-    // || (item.supplier_name && item.supplier_name.toLowerCase().includes(term));
 
+    // LOW STOCK: Stock must be BELOW safety stock.
     const matchesFilter =
       currentFilter === "all" ||
       (currentFilter === "low_stock" &&
-        Number(item.stock) <= Number(item.safety_stock));
+        Number(item.stock) < Number(item.safety_stock));
 
     return matchesSearch && matchesFilter;
   });
 
-  renderItems(filtered, allItems.length);
+  renderItems(filtered, filtered.length, { archived: false });
 }
 
-function renderItems(items, totalItemsCount = 0) {
+function renderItems(items, totalItemsCount = 0, { archived = false } = {}) {
   const tbody = document.querySelector("#itemsTableBody");
+  const cardList = document.querySelector("#itemsCardList");
+  if (!tbody || !cardList) return;
+
+  tbody.innerHTML = "";
+  cardList.innerHTML = "";
 
   const showingCount = document.getElementById("showingCount");
   const totalCount = document.getElementById("totalCount");
 
-  if (showingCount) showingCount.innerHTML = items.length;
-  if (totalCount) totalCount.innerHTML = totalItemsCount;
-
-  if (!tbody) return;
-
-  tbody.innerHTML = "";
+  if (showingCount) showingCount.textContent = items.length;
+  if (totalCount) totalCount.textContent = totalItemsCount;
 
   if (items.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="6" class="py-10 text-center text-gray-500">
-          <div class="flex flex-col items-center gap-2">
-            <i data-lucide="package-x" class="w-10 h-10 text-gray-300"></i>
-            <p class="text-base font-medium">No items found</p>
-            <p class="text-sm text-gray-400">Try adjusting your search query or add a new item.</p>
-          </div>
-        </td>
-      </tr>
+    const emptyHTML = archived
+      ? `
+      <div class="flex flex-col items-center gap-2 py-10 text-center text-gray-500">
+        <i data-lucide="archive-x" class="w-10 h-10 text-gray-300"></i>
+        <p class="text-base font-medium">No archived items</p>
+        <p class="text-sm text-gray-400">
+          Deleted items will show up here.
+        </p>
+      </div>
+    `
+      : `
+      <div class="flex flex-col items-center gap-2 py-10 text-center text-gray-500">
+        <i data-lucide="package-x" class="w-10 h-10 text-gray-300"></i>
+        <p class="text-base font-medium">No items found</p>
+        <p class="text-sm text-gray-400">
+          Try adjusting your search query or add a new item.
+        </p>
+      </div>
     `;
-    refreshIcons();
+
+    tbody.innerHTML = `<tr><td colspan="6" class="py-10 text-center text-gray-500">${emptyHTML}</td></tr>`;
+    cardList.innerHTML = emptyHTML;
+
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+
     return;
   }
 
   items.forEach((item) => {
     const currentStock = Number(item.stock);
     const safetyStock = Number(item.safety_stock);
-    const isLowStock = currentStock <= safetyStock;
+    const isLowStock = currentStock < safetyStock;
 
-    const stockBadge = isLowStock
-      ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold text-rose-600">
+    const stockBadge = archived
+      ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold text-gray-500">
+            (${currentStock}) in stock
+         </span>`
+      : isLowStock
+        ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold text-rose-600">
             Low Stock (${currentStock})
          </span>`
-      : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold text-emerald-600">
+        : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold text-emerald-600">
             (${currentStock}) in stock
          </span>`;
 
-    const tr = document.createElement("tr");
-    tr.className = "hover:bg-gray-50/80 transition group";
+    const actionsHTML = archived
+      ? `
+      <button
+        title="Restore Item"
+        class="restore-btn p-1.5 text-gray-400 hover:text-emerald-600 rounded-lg hover:bg-emerald-50 transition cursor-pointer"
+      >
+        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+      </button>
+    `
+      : `
+      <button
+        title="Edit Item"
+        class="edit-btn p-1.5 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition cursor-pointer"
+      >
+        <i data-lucide="pencil" class="w-4 h-4"></i>
+      </button>
 
+      <button
+        title="Delete Item"
+        class="delete-btn p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition cursor-pointer"
+      >
+        <i data-lucide="trash-2" class="w-4 h-4"></i>
+      </button>
+    `;
+
+    // ---- Desktop Table Row ----
+    const tr = document.createElement("tr");
+    tr.className = `hover:bg-gray-50/80 transition group${
+      archived ? " opacity-70" : ""
+    }`;
     tr.innerHTML = `
       <td class="py-3.5 px-4 sm:px-6 text-left">
-        <div class="font-bold text-gray-900 group-hover:text-blue-600 transition">${item.name}</div>
-        <div class="text-[11px] text-gray-400 font-medium">ID: ITM-${item.id}</div>
+        <div class="font-bold text-gray-900 group-hover:text-blue-600 transition">
+          ${item.name}
+        </div>
+        <div class="text-[11px] text-gray-400 font-medium">
+          ID: ITM-${item.id}
+        </div>
       </td>
+
       <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
         ${item.category_name || "Uncategorized"}
       </td>
-      
-      <td class="py-3.5 px-4 sm:px-6 text-left">${stockBadge}</td>
+
+      <td class="py-3.5 px-4 sm:px-6 text-left">
+        ${stockBadge}
+      </td>
+
       <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
         ${safetyStock}
       </td>
+
       <td class="py-3.5 px-4 sm:px-6 text-left text-gray-900 font-bold">
         ₱${Number(item.selling_price).toFixed(2)}
       </td>
+
       <td class="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
         <div class="flex items-center justify-end space-x-1">
-          <button title="Edit Item" class="edit-btn p-1.5 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition cursor-pointer">
-            <i data-lucide="pencil" class="w-4 h-4"></i>
-          </button>
-          <button title="Delete Item" class="delete-btn p-1.5 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition cursor-pointer">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-          </button>
+          ${actionsHTML}
         </div>
       </td>
     `;
 
-    tr.querySelector(".edit-btn").addEventListener("click", () => {
-      openItemModal({ title: "Edit Item", item });
-    });
+    // ---- Mobile Card ----
+    const card = document.createElement("div");
+    card.className = `p-4 flex flex-col gap-2.5 hover:bg-gray-50/80 transition group border-b border-gray-100 last:border-b-0${
+      archived ? " opacity-70" : ""
+    }`;
+    card.innerHTML = `
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="font-bold text-gray-900 group-hover:text-blue-600 transition truncate">
+            ${item.name}
+          </div>
+          <div class="text-[11px] text-gray-400 font-medium">ID: ITM-${item.id}</div>
+        </div>
+        <div class="shrink-0 text-right">
+          <div class="text-sm font-bold text-gray-900">₱${Number(item.selling_price).toFixed(2)}</div>
+        </div>
+      </div>
 
-    tr.querySelector(".delete-btn").addEventListener("click", () => {
-      removeItem(item.id);
-    });
+      <div class="flex items-center justify-between gap-2 text-xs text-gray-600">
+        <span class="font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-700 truncate max-w-[150px]">
+          ${item.category_name || "Uncategorized"}
+        </span>
+        <div>${stockBadge}</div>
+      </div>
+
+      <div class="flex items-center justify-between text-xs text-gray-500 pt-1">
+        <span>Safety Stock: <strong class="text-gray-700">${safetyStock}</strong></span>
+        <div class="flex items-center justify-end space-x-1">
+          ${actionsHTML}
+        </div>
+      </div>
+    `;
+
+    if (archived) {
+      // Bind Listeners (Archived — restore only)
+      tr.querySelector(".restore-btn").addEventListener("click", () => {
+        restoreItemHandler(item.id);
+      });
+      card.querySelector(".restore-btn").addEventListener("click", () => {
+        restoreItemHandler(item.id);
+      });
+    } else {
+      // Bind Listeners (Desktop)
+      tr.querySelector(".edit-btn").addEventListener("click", () => {
+        openItemModal({ title: "Edit Item", item });
+      });
+      tr.querySelector(".delete-btn").addEventListener("click", () => {
+        removeItem(item.id);
+      });
+
+      // Bind Listeners (Mobile)
+      card.querySelector(".edit-btn").addEventListener("click", () => {
+        openItemModal({ title: "Edit Item", item });
+      });
+      card.querySelector(".delete-btn").addEventListener("click", () => {
+        removeItem(item.id);
+      });
+    }
 
     tbody.appendChild(tr);
+    cardList.appendChild(card);
   });
 
-  refreshIcons();
+  if (window.lucide) {
+    lucide.createIcons();
+  }
 }
 
-// ======================
 // Event Listeners Setup
-// ======================
 function setupEventListeners() {
   const searchInput = document.getElementById("searchInput");
+
   if (searchInput) {
     searchInput.addEventListener("input", () => {
       currentSearch = searchInput.value;
@@ -218,57 +341,84 @@ function setupEventListeners() {
 
   const allButton = document.getElementById("allButton");
   const lowStockBtn = document.getElementById("lowStockBtn");
+  const archivedBtn = document.getElementById("archivedBtn");
 
-  if (allButton && lowStockBtn) {
+  const activeClass =
+    "px-3 py-1.5 rounded-md bg-white text-gray-900 shadow-sm flex-1 sm:flex-none text-center cursor-pointer";
+  const inactiveClass =
+    "px-3 py-1.5 rounded-md hover:text-gray-900 transition flex-1 sm:flex-none text-center cursor-pointer";
+
+  function setActiveToggle(activeBtn) {
+    [allButton, lowStockBtn, archivedBtn].forEach((btn) => {
+      if (!btn) return;
+      btn.className = btn === activeBtn ? activeClass : inactiveClass;
+    });
+  }
+
+  if (allButton) {
     allButton.addEventListener("click", () => {
       currentFilter = "all";
-      allButton.className =
-        "px-3 py-1.5 rounded-md bg-white text-gray-900 shadow-sm flex-1 sm:flex-none text-center cursor-pointer";
-      lowStockBtn.className =
-        "px-3 py-1.5 rounded-md hover:text-gray-900 transition flex-1 sm:flex-none text-center cursor-pointer";
+      setActiveToggle(allButton);
       applyFilters();
     });
+  }
 
+  if (lowStockBtn) {
     lowStockBtn.addEventListener("click", () => {
       currentFilter = "low_stock";
-      lowStockBtn.className =
-        "px-3 py-1.5 rounded-md bg-white text-gray-900 shadow-sm flex-1 sm:flex-none text-center cursor-pointer";
-      allButton.className =
-        "px-3 py-1.5 rounded-md hover:text-gray-900 transition flex-1 sm:flex-none text-center cursor-pointer";
+      setActiveToggle(lowStockBtn);
       applyFilters();
+    });
+  }
+
+  if (archivedBtn) {
+    archivedBtn.addEventListener("click", async () => {
+      currentFilter = "archived";
+      setActiveToggle(archivedBtn);
+      await loadArchivedItems();
     });
   }
 
   const addBtn = document.getElementById("addBtn");
+
   if (addBtn) {
     addBtn.addEventListener("click", () => {
-      openItemModal({ title: "Add New Item" });
+      openItemModal({
+        title: "Add New Item",
+      });
     });
   }
 }
 
-// ======================
 // Save & Delete Actions
-// ======================
 async function saveItem(id = null) {
   clearModalErrors();
 
   const name = document.getElementById("itemName").value.trim();
   const category_id = document.getElementById("itemCategory").value;
-  // const supplier_id = document.getElementById("itemSupplier").value;
   const safety_stock = document.getElementById("itemSafetyStock").value.trim();
+
   const selling_price = document
     .getElementById("itemSellingPrice")
     .value.trim();
 
   const localErrors = {};
-  if (!name) localErrors["name"] = "Item name is required.";
-  if (!category_id) localErrors["category_id"] = "Please select a category.";
-  // if (!supplier_id) localErrors["supplier_id"] = "Please select a supplier.";
-  if (safety_stock === "")
+
+  if (!name) {
+    localErrors["name"] = "Item name is required.";
+  }
+
+  if (!category_id) {
+    localErrors["category_id"] = "Please select a category.";
+  }
+
+  if (safety_stock === "") {
     localErrors["safety_stock"] = "Safety stock is required.";
-  if (selling_price === "")
+  }
+
+  if (selling_price === "") {
     localErrors["selling_price"] = "Selling price is required.";
+  }
 
   if (Object.keys(localErrors).length > 0) {
     showModalErrors(localErrors);
@@ -277,23 +427,17 @@ async function saveItem(id = null) {
 
   try {
     let result;
+
     if (id) {
       result = await updateItem(
         id,
         name,
         category_id,
-        // supplier_id,
         safety_stock,
         selling_price,
       );
     } else {
-      result = await createItem(
-        name,
-        category_id,
-        // supplier_id,
-        safety_stock,
-        selling_price,
-      );
+      result = await createItem(name, category_id, safety_stock, selling_price);
     }
 
     if (result && result.status === "error") {
@@ -302,12 +446,15 @@ async function saveItem(id = null) {
       } else {
         toastError(result.message || "Failed to save item.");
       }
+
       return;
     }
 
     toastSuccess(result.message || "Saved successfully!");
+
     closeModal();
-    loadItems();
+
+    await loadItems();
   } catch (error) {
     console.error(error);
     toastError("An error occurred while saving the item.");
@@ -330,9 +477,10 @@ async function removeItem(id) {
 
     if (result && result.status === "success") {
       toastSuccess(result.message || "Item deleted successfully.");
-      loadItems();
+
+      await loadItems();
     } else {
-      toastError(result.message || "Failed to delete item.");
+      toastError(result?.message || "Failed to delete item.");
     }
   } catch (error) {
     console.error(error);
@@ -340,9 +488,29 @@ async function removeItem(id) {
   }
 }
 
-// ======================
+async function restoreItemHandler(id) {
+  try {
+    const result = await restoreItem(id);
+
+    if (result && result.status === "success") {
+      toastSuccess(result.message || "Item restored successfully.");
+
+      // Refresh both lists since the item moves from archived back to active
+      await Promise.all([loadArchivedItems(), loadItems()]);
+
+      if (currentFilter === "archived") {
+        applyFilters();
+      }
+    } else {
+      toastError(result?.message || "Failed to restore item.");
+    }
+  } catch (error) {
+    console.error(error);
+    toastError("An error occurred while restoring the item.");
+  }
+}
+
 // Modal Handler
-// ======================
 async function openItemModal({ title, item = null }) {
   if (categoriesList.length === 0) {
     await loadCategories();
@@ -353,33 +521,32 @@ async function openItemModal({ title, item = null }) {
       ? categoriesList
           .map(
             (cat) =>
-              `<option value="${cat.id}" ${item && Number(item.category_id) === Number(cat.id) ? "selected" : ""}>
-               ${cat.name}
-             </option>`,
+              `<option value="${cat.id}" ${
+                item && Number(item.category_id) === Number(cat.id)
+                  ? "selected"
+                  : ""
+              }>
+                ${cat.name}
+              </option>`,
           )
           .join("")
       : `<option value="" disabled>No categories available.</option>`;
 
-  // const supplierOptions =
-  //   suppliersList.length > 0
-  //     ? suppliersList
-  //         .map(
-  //           (sup) =>
-  //             `<option value="${sup.id}" ${item && Number(item.supplier_id) === Number(sup.id) ? "selected" : ""}>
-  //              ${sup.name}
-  //            </option>`,
-  //         )
-  //         .join("")
-  //     : `<option value="" disabled>No suppliers available</option>`;
-
   openModal({
     titleText: title,
+
     bodyHTML: `
-      <form id="itemForm" onsubmit="event.preventDefault();" class="flex flex-col gap-4">
+      <form
+        id="itemForm"
+        onsubmit="event.preventDefault();"
+        class="flex flex-col gap-4"
+      >
+
         <div>
           <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
             Item Name <span class="text-red-500">*</span>
           </label>
+
           <input
             id="itemName"
             name="name"
@@ -388,13 +555,18 @@ async function openItemModal({ title, item = null }) {
             placeholder="e.g. Wireless Mouse"
             value="${item ? item.name : ""}"
           >
-          <p class="error-msg text-xs text-rose-500 font-medium mt-1 hidden" id="error-name"></p>
+
+          <p
+            class="error-msg text-xs text-rose-500 font-medium mt-1 hidden"
+            id="error-name"
+          ></p>
         </div>
 
         <div>
           <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
             Category <span class="text-red-500">*</span>
           </label>
+
           <select
             id="itemCategory"
             name="category_id"
@@ -403,16 +575,20 @@ async function openItemModal({ title, item = null }) {
             <option value="">Select Category</option>
             ${categoryOptions}
           </select>
-          <p class="error-msg text-xs text-rose-500 font-medium mt-1 hidden" id="error-category_id"></p>
+
+          <p
+            class="error-msg text-xs text-rose-500 font-medium mt-1 hidden"
+            id="error-category_id"
+          ></p>
         </div>
 
-        
-
         <div class="grid grid-cols-2 gap-3">
+
           <div>
             <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
               Safety Stock <span class="text-red-500">*</span>
             </label>
+
             <input
               id="itemSafetyStock"
               name="safety_stock"
@@ -422,13 +598,18 @@ async function openItemModal({ title, item = null }) {
               placeholder="5"
               value="${item ? item.safety_stock : "5"}"
             >
-            <p class="error-msg text-xs text-rose-500 font-medium mt-1 hidden" id="error-safety_stock"></p>
+
+            <p
+              class="error-msg text-xs text-rose-500 font-medium mt-1 hidden"
+              id="error-safety_stock"
+            ></p>
           </div>
 
           <div>
             <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
               Selling Price <span class="text-red-500">*</span>
             </label>
+
             <input
               id="itemSellingPrice"
               name="selling_price"
@@ -439,11 +620,18 @@ async function openItemModal({ title, item = null }) {
               placeholder="0.00"
               value="${item ? item.selling_price : ""}"
             >
-            <p class="error-msg text-xs text-rose-500 font-medium mt-1 hidden" id="error-selling_price"></p>
+
+            <p
+              class="error-msg text-xs text-rose-500 font-medium mt-1 hidden"
+              id="error-selling_price"
+            ></p>
           </div>
+
         </div>
+
       </form>
     `,
+
     footerHTML: `
       <button
         id="cancelModalBtn"
@@ -466,12 +654,14 @@ async function openItemModal({ title, item = null }) {
   document
     .getElementById("cancelModalBtn")
     .addEventListener("click", closeModal);
+
   document.getElementById("saveItemBtn").addEventListener("click", () => {
     saveItem(item ? item.id : null);
   });
 
-  refreshIcons();
+  if (window.lucide) {
+    lucide.createIcons();
+  }
 }
 
-// Initialize on page load
 init();

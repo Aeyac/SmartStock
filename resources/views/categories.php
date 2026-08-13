@@ -1,6 +1,5 @@
 <?php
 session_start();
-
 if (!isset($_SESSION['user_id'])) {
     header("Location: /smart_stock/index.php");
     session_destroy();
@@ -17,11 +16,10 @@ if (!isset($_SESSION['user_id'])) {
     <title>SmartStock - Categories</title>
 
     <link rel="stylesheet" href="../../src/output.css" />
-
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
-<body class="bg-gray-100 font-sans text-gray-800 antialiased min-h-screen flex flex-col md:flex-row">
+<body class="bg-gray-100 text-gray-800 antialiased min-h-screen flex flex-col md:flex-row">
     <?php require_once "partials/modal.php" ?>
     <?php require_once "partials/sidebar.php" ?>
 
@@ -48,7 +46,7 @@ if (!isset($_SESSION['user_id'])) {
                         <div class="pr-4 sm:pr-6 text-center sm:text-left">
                             <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">TOTAL
                                 CATEGORIES</span>
-                            <span id="totalCategories" class="text-base sm:text-lg font-bold text-gray-900"></span>
+                            <span id="totalCategories" class="sm:text-lg font-bold text-gray-900"></span>
                         </div>
                     </div>
 
@@ -97,7 +95,6 @@ if (!isset($_SESSION['user_id'])) {
                                 <th class="py-3.5 px-4 sm:px-6 text-left cursor-pointer hover:text-gray-800 transition">
                                     <span>CATEGORY NAME</span>
                                 </th>
-                                <th class="py-3.5 px-4 sm:px-6 text-left">TOTAL ITEMS</th>
                                 <th class="py-3.5 px-4 sm:px-6 text-left">CREATED AT</th>
                                 <th class="py-3.5 px-4 sm:px-6 text-right">ACTIONS</th>
                             </tr>

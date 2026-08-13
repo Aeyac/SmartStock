@@ -30,7 +30,7 @@ function validateItemInput($mydb, $userId, $data, $currentItemId = null)
 
     $errors = [];
 
-    // 1. Name validation & uniqueness per user
+    //  Name validation & uniqueness per user
     if ($name === '') {
         $errors['name'] = 'Item name is required.';
     } else {
@@ -45,7 +45,7 @@ function validateItemInput($mydb, $userId, $data, $currentItemId = null)
         }
     }
 
-    // 2. Category validation
+    // Category validation
     if ($categoryId <= 0) {
         $errors['category_id'] = 'Please select a valid category.';
     } else {
@@ -58,25 +58,12 @@ function validateItemInput($mydb, $userId, $data, $currentItemId = null)
         }
     }
 
-    // 2. Supplier validation
-    // if ($supplierId <= 0) {
-    //     $errors['supplier_id'] = 'Please select a valid supplier.';
-    // } else {
-    //     $mydb->select('suppliers', 'id', [
-    //         'id' => $supplierId,
-    //         'user_id' => $userId
-    //     ]);
-    //     if (!$mydb->res || !$mydb->res->fetch_assoc()) {
-    //         $errors['supplier_id'] = 'Selected supplier does not exist.';
-    //     }
-    // }
-
-    // 3. Safety Stock validation
+    // Safety Stock validation
     if ($safetyStock === null || $safetyStock === '' || !is_numeric($safetyStock) || (int) $safetyStock < 0) {
         $errors['safety_stock'] = 'Safety stock must be a non-negative number.';
     }
 
-    // 4. Selling Price validation
+    //  Selling Price validation
     if ($sellingPrice === null || $sellingPrice === '' || !is_numeric($sellingPrice) || (float) $sellingPrice < 0) {
         $errors['selling_price'] = 'Selling price must be a non-negative number.';
     }
@@ -87,7 +74,6 @@ function validateItemInput($mydb, $userId, $data, $currentItemId = null)
         'data' => [
             'name' => $name,
             'category_id' => $categoryId,
-            // 'supplier_id' => $supplierId,
             'safety_stock' => (int) $safetyStock,
             'selling_price' => (float) $sellingPrice
         ]
@@ -95,40 +81,20 @@ function validateItemInput($mydb, $userId, $data, $currentItemId = null)
 }
 
 switch ($method) {
-
-    // GET - List Items (Supports ?low_stock=1)
+    // GET - List Items
     case 'GET':
-        if (isset($_GET['low_stock'])) {
-            $stmt = $mydb->conn->prepare(
-                "SELECT i.*, c.name AS category_name 
-                 FROM items i
-                 LEFT JOIN categories c ON c.id = i.category_id
-                 WHERE i.user_id = ? AND i.deleted_at IS NULL
-                 AND i.stock <= i.safety_stock 
-                 ORDER BY i.stock ASC"
-            );
-            $stmt->bind_param('i', $userId);
-            $stmt->execute();
-            $items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-            $stmt->close();
+        // If ?trashed=1, show soft-deleted items instead of active ones
+        $showTrashed = isset($_GET['trashed']) && $_GET['trashed'] === '1';
 
-            echo json_encode([
-                'status' => 'success',
-                'items' => $items
-            ]);
-            exit;
-        }
-
+        $deletedCondition = $showTrashed
+            ? "i.deleted_at IS NOT NULL"
+            : "i.deleted_at IS NULL";
 
         $stmt = $mydb->conn->prepare(
             "SELECT
-                i.*,
-                c.name AS category_name
-                -- s.name AS supplier_name
-            FROM items i
+            i.*, c.name AS category_name FROM items i
             LEFT JOIN categories c ON c.id = i.category_id
-            -- LEFT JOIN suppliers s ON s.id = i.supplier_id
-            WHERE i.user_id = ? AND i.deleted_at IS NULL
+            WHERE i.user_id = ? AND $deletedCondition
             ORDER BY i.name ASC"
         );
         $stmt->bind_param('i', $userId);
@@ -160,7 +126,6 @@ switch ($method) {
         $id = $mydb->insert('items', [
             'user_id' => $userId,
             'category_id' => $validData['category_id'],
-            // 'supplier_id' => $validData['supplier_id'],
             'name' => $validData['name'],
             'stock' => 0, // Starts at 0 until recorded via purchases
             'safety_stock' => $validData['safety_stock'],
@@ -185,7 +150,6 @@ switch ($method) {
         ]);
 
         if (!$mydb->res || !$mydb->res->fetch_assoc()) {
-            http_response_code(404);
             echo json_encode([
                 'status' => 'error',
                 'message' => 'Item not found.'
@@ -197,7 +161,6 @@ switch ($method) {
         $validation = validateItemInput($mydb, $userId, $input, $id);
 
         if (!$validation['isValid']) {
-            http_response_code(422);
             echo json_encode([
                 'status' => 'error',
                 'errors' => $validation['errors']
@@ -212,7 +175,6 @@ switch ($method) {
             [
                 'name' => $validData['name'],
                 'category_id' => $validData['category_id'],
-                // 'supplier_id' => $validData['supplier_id'],
                 'safety_stock' => $validData['safety_stock'],
                 'selling_price' => $validData['selling_price']
             ],
@@ -259,6 +221,63 @@ switch ($method) {
         echo json_encode([
             'status' => 'success',
             'message' => 'Item deleted successfully.'
+        ]);
+        break;
+
+    // PATCH - Restore Item
+    case 'PATCH':
+        $id = (int) ($_GET['id'] ?? 0);
+
+        $mydb->select('items', '*', [
+            'id' => $id,
+            'user_id' => $userId
+        ]);
+        $existingItem = $mydb->res ? $mydb->res->fetch_assoc() : null;
+
+        if (!$existingItem) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Item not found.'
+            ]);
+            exit;
+        }
+
+        if ($existingItem['deleted_at'] === null) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Item is not deleted.'
+            ]);
+            exit;
+        }
+
+        // Prevent restoring into a name that's already active again
+        $mydb->select('items', 'id', [
+            'name' => $existingItem['name'],
+            'user_id' => $userId,
+            'deleted_at' => null
+        ]);
+        $duplicate = $mydb->res ? $mydb->res->fetch_assoc() : null;
+
+        if ($duplicate) {
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Cannot restore: an active item with this name already exists.'
+            ]);
+            exit;
+        }
+
+        $mydb->update(
+            'items',
+            ['deleted_at' => null],
+            [
+                'id' => $id,
+                'user_id' => $userId
+            ]
+        );
+
+        echo json_encode([
+            'status' => 'success',
+            'message' => 'Item restored successfully.'
         ]);
         break;
 

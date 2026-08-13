@@ -17,7 +17,6 @@ if (!isset($_SESSION['user_id'])) {
     <title>SmartStock - Items</title>
 
     <link rel="stylesheet" href="../../src/output.css" />
-
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
@@ -40,7 +39,7 @@ if (!isset($_SESSION['user_id'])) {
                         pricing</p>
                 </div>
 
-                <!-- Controls: Stat Counter + Primary Button -->
+                <!-- Stat Counter and Primary Button -->
                 <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
                     <div
                         class="flex justify-around bg-white border border-gray-200 rounded-xl px-4 py-2 divide-x divide-gray-200 shadow-sm">
@@ -67,7 +66,7 @@ if (!isset($_SESSION['user_id'])) {
             <!-- Table Container Card -->
             <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
 
-                <!-- Controls Bar: Search & Filtering -->
+                <!--  Search and Filtering -->
                 <div
                     class="p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-gray-100">
                     <div class="relative w-full sm:w-72">
@@ -86,38 +85,27 @@ if (!isset($_SESSION['user_id'])) {
                             <button id="lowStockBtn"
                                 class="px-3 py-1.5 rounded-md hover:text-gray-900 transition flex-1 sm:flex-none text-center cursor-pointer">Low
                                 Stock</button>
+                                <button id="archivedBtn"
+                                class="px-3 py-1.5 rounded-md hover:text-gray-900 transition flex-1 sm:flex-none text-center cursor-pointer">Archived</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Table View -->
-                <div class="max-h-[500px] overflow-y-auto overflow-x-auto">
+                <div class="hidden md:block max-h-[500px] overflow-y-auto overflow-x-auto">
                     <table id="itemsTable" class="w-full min-w-[700px] border-collapse">
                         <thead class="sticky top-0 bg-gray-50 z-10">
                             <tr
                                 class="bg-gray-50 border-b border-gray-200 text-[11px] font-bold tracking-wider text-gray-500 uppercase select-none">
-
-                                <!-- Column 1 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-left cursor-pointer hover:text-gray-800 transition">
-                                        <span>ITEM NAME</span>
+                                    <span>ITEM NAME</span>
                                 </th>
-
-                                <!-- Column 2 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-left">CATEGORY</th>
-
-
-                                <!-- Column 3 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-left cursor-pointer hover:text-gray-800 transition">
-                                        <span>STOCK LEVEL</span>
+                                    STOCK LEVEL
                                 </th>
-
-                                <!-- Column 4 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-left">SAFETY STOCK</th>
-
-                                <!-- Column 5 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-left">SELLING PRICE</th>
-
-                                <!-- Column 6 Header -->
                                 <th class="py-3.5 px-4 sm:px-6 text-right">ACTIONS</th>
                             </tr>
                         </thead>
@@ -127,7 +115,11 @@ if (!isset($_SESSION['user_id'])) {
                     </table>
                 </div>
 
-                <!-- Table Footer / Pagination -->
+                <!-- Card View (mobile) -->
+                <div id="itemsCardList" class="md:hidden max-h-[500px] overflow-y-auto divide-y divide-gray-100">
+                </div>
+
+                <!-- Table Footer -->
                 <div
                     class="p-4 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500 font-medium">
                     <div>

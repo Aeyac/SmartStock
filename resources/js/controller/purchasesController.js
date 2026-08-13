@@ -385,9 +385,7 @@ async function openPurchaseModal() {
   addItemRow();
 }
 
-// ======================
 // Item Row Helpers
-// ======================
 function addItemRow() {
   const container = document.getElementById("itemRowsContainer");
   if (!container) return;

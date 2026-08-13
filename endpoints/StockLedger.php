@@ -18,12 +18,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 switch ($method) {
 
     // GET - List all ledger entries for the logged-in user's items.
-    // Filtering by type/item is handled client-side, same as the other
-    // controllers (suppliers, purchases, sales) — no query params needed here.
-    // stock_ledger has no user_id column, so scoping is done through the
-    // items table via a JOIN, the same way purchase_items/sale_items are.
     case 'GET':
-
         $stmt = $mydb->conn->prepare(
             "SELECT sl.*, i.name AS item_name FROM stock_ledger sl
              INNER JOIN items i ON i.id = sl.item_id
@@ -42,11 +37,7 @@ switch ($method) {
 
 
     // POST - Record a manual stock adjustment (damaged goods, recount, etc.)
-    // Purchase/sale ledger rows are NEVER created here — those are written
-    // transactionally inside Purchases.php and Sales.php alongside their
-    // own stock updates. This endpoint only ever writes type = 'adjustment'.
     case 'POST':
-
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
 
         $itemId = (int) ($data['item_id'] ?? 0);

@@ -102,7 +102,8 @@ switch ($method) {
             exit;
         }
 
-        // Manual query: needs a JOIN to show the supplier's name alongside each purchase
+        
+
         $stmt = $mydb->conn->prepare(
             "SELECT p.*, s.name AS supplier_name FROM purchases p
              INNER JOIN suppliers s ON s.id = p.supplier_id
@@ -200,6 +201,5 @@ switch ($method) {
 
 
     default:
-        http_response_code(405);
         echo json_encode(['status' => 'error', 'message' => 'Method Not Allowed.']);
 }

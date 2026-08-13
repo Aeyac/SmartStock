@@ -17,36 +17,15 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
 
-    // GET - List Categories
-    // Default: active (non-archived) categories only.
-    // ?archived=1 : list archived (soft-deleted) categories instead, for
-    // a "restore from archive" screen.
     case 'GET':
-
-        if (isset($_GET['archived']) && $_GET['archived'] == '1') {
-            // $mydb->select() only knows how to build "IS NULL" checks, not
-            // "IS NOT NULL", so archived listing needs a raw prepared query.
-            $stmt = $mydb->conn->prepare(
-                "SELECT * FROM categories
-                 WHERE user_id = ? AND deleted_at IS NOT NULL
-                 ORDER BY deleted_at DESC"
-            );
-            $stmt->bind_param('i', $userId);
-            $stmt->execute();
-            $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-            $stmt->close();
-        } else {
-            $mydb->select('categories', '*', ['user_id' => $userId, 'deleted_at' => null]);
-            $categories = $mydb->res ? $mydb->res->fetch_all(MYSQLI_ASSOC) : [];
-        }
+        $mydb->select('categories', '*', ['user_id' => $userId]);
+        $categories = $mydb->res ? $mydb->res->fetch_all(MYSQLI_ASSOC) : [];
 
         echo json_encode(['status' => 'success', 'categories' => $categories]);
         break;
 
 
-    // POST - Create Category
     case 'POST':
-
         $data = json_decode(file_get_contents('php://input'), true) ?? [];
         $name = trim($data['name'] ?? '');
 
@@ -55,11 +34,7 @@ switch ($method) {
             exit;
         }
 
-        // Check ALL categories, active or archived — the database has a
-        // unique constraint on name that doesn't distinguish archived rows,
-        // so an archived "Shoes" still blocks a new "Shoes" at the DB level.
-        // Checking here first means the user gets a clear message instead
-        // of a raw SQL error.
+        // Checking here first means so the user gets a clear message instead
         $mydb->select('categories', 'id', ['name' => $name, 'user_id' => $userId]);
         if ($mydb->res && $mydb->res->fetch_assoc()) {
             echo json_encode([
@@ -69,13 +44,12 @@ switch ($method) {
             exit;
         }
 
-        $id = $mydb->insert('categories', ['user_id' => $userId, 'name' => $name]);
-
-        echo json_encode(['status' => 'success', 'message' => 'Category created successfully.', 'id' => $id]);
+        $mydb->insert('categories', ['user_id' => $userId, 'name' => $name]);
+        echo json_encode(['status' => 'success', 'message' => 'Category created successfully.']);
         break;
 
 
-    // PUT - Rename a Category (active categories only)
+    // PUT - Rename a Category (archived categories are excluded)
     case 'PUT':
         $id = (int) ($_GET['id'] ?? 0);
 
@@ -94,14 +68,6 @@ switch ($method) {
             exit;
         }
 
-        if ($category['deleted_at'] !== null) {
-            echo json_encode([
-                'status' => 'error',
-                'message' => 'This category is archived. Restore it before renaming.'
-            ]);
-            exit;
-        }
-
         $input = json_decode(file_get_contents('php://input'), true) ?? [];
         $name = trim($input['name'] ?? '');
 
@@ -113,9 +79,17 @@ switch ($method) {
             exit;
         }
 
-        // Same reasoning as the create check above — the unique constraint
-        // doesn't care whether a matching row is archived, so this needs
-        // to check all categories, not just active ones.
+        // Nothing to check or update if the name didn't actually change.
+        if ($name === $category['name']) {
+            echo json_encode([
+                'status' => 'success',
+                'message' => 'Category updated successfully.'
+            ]);
+            exit;
+        }
+
+        // to check all categories, not just active ones. myDB::select()
+        // mydb select can't express "!=" so we have to manual query.
         $stmt = $mydb->conn->prepare(
             "SELECT id FROM categories
              WHERE name = ? AND user_id = ? AND id != ?"
@@ -142,7 +116,7 @@ switch ($method) {
         break;
 
 
-    // DELETE - Soft delete (archive) a Category
+    // DELETE - Soft delete (archive) a category only
     case 'DELETE':
         $id = (int) ($_GET['id'] ?? 0);
 
@@ -181,25 +155,20 @@ switch ($method) {
             exit;
         }
 
-        // Restoring shouldn't silently create a duplicate — if a new
-        // active category has since taken this name, block the restore
-        // and ask the user to rename one of them first.
-        $mydb->select('categories', 'id', ['name' => $category['name'], 'user_id' => $userId, 'deleted_at' => null]);
-        if ($mydb->res && $mydb->res->fetch_assoc()) {
-            echo json_encode([
-                'status' => 'error',
-                'message' => 'An active category with this name already exists. Rename it before restoring.'
-            ]);
-            exit;
-        }
+        // $mydb->select('categories', 'id', ['name' => $category['name'], 'user_id' => $userId, 'deleted_at' => null]);
+        // if ($mydb->res && $mydb->res->fetch_assoc()) {
+        //     echo json_encode([
+        //         'status' => 'error',
+        //         'message' => 'An active category with this name already exists. Rename it before restoring.'
+        //     ]);
+        //     exit;
+        // }
 
         $mydb->update('categories', ['deleted_at' => null], ['id' => $id, 'user_id' => $userId]);
-
         echo json_encode(['status' => 'success', 'message' => 'Category restored successfully.']);
         break;
 
 
     default:
-        http_response_code(405);
         echo json_encode(['status' => 'error', 'message' => 'Method Not Allowed.']);
 }

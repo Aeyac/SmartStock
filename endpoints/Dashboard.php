@@ -16,7 +16,6 @@ $mydb = new myDB();
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method !== 'GET') {
-    http_response_code(405);
     echo json_encode(['status' => 'error', 'message' => 'Method Not Allowed.']);
     exit;
 }
@@ -102,8 +101,6 @@ $lastMonthRevenue = getMonthlyTotal($mydb, 'sales', 'sale_date', $userId, $prevM
 
 // Net Profit = money earned from sales MINUS money spent on purchases,
 // for this month only. (This is a simple "cash flow" view, not full
-// accounting profit — we're not tracking which exact items were sold
-// vs which were just bought and are still sitting in stock.)
 $netProfit = $monthlyRevenue - $monthlySpend;
 $lastMonthNetProfit = $lastMonthRevenue - $lastMonthSpend;
 
@@ -189,11 +186,7 @@ $trends = [
 ];
 
 
-// =======================================================================
-// STEP 3: LOW STOCK ALERTS
-// =======================================================================
-// An item counts as "low stock" once its current stock drops to or below
-// its own safety_stock threshold (set per-item in the items table).
+// LOW STOCK ALERTS
 
 $stmt = $mydb->conn->prepare(
     "SELECT id, name, stock, safety_stock 
@@ -216,10 +209,8 @@ foreach ($lowStockRows as $item) {
     $stock = (int) $item['stock'];
     $safetyStock = (int) $item['safety_stock'];
 
-    // The items table doesn't actually have a SKU column, so we make a
-    // fake-but-consistent one from the item's ID just so the UI has
-    // something to display (e.g. id 7 -> "SKU-0007").
-    $fakeSku = 'SKU-' . str_pad((string) $itemId, 4, '0', STR_PAD_LEFT);
+    
+    $fakeSku = 'ITM-' . str_pad((string) $itemId, 2, '0', STR_PAD_LEFT);
 
     // Decide the status label: completely out, or just running low.
     if ($stock === 0) {
@@ -239,10 +230,7 @@ foreach ($lowStockRows as $item) {
 }
 
 
-// =======================================================================
-// STEP 4: BEST SELLING ITEMS (this month), ranked two ways
-// =======================================================================
-
+// EST SELLING ITEMS (this month), ranked two ways
 $stmt = $mydb->conn->prepare(
     "SELECT si.item_id, i.name, SUM(si.quantity) AS qty, SUM(si.subtotal) AS revenue
      FROM sale_items si
@@ -298,10 +286,6 @@ $bestSelling = [
     'by_revenue' => $byRevenue,
 ];
 
-
-// =======================================================================
-// STEP 5: SEND EVERYTHING BACK AS ONE JSON RESPONSE
-// =======================================================================
 
 echo json_encode([
     'status' => 'success',

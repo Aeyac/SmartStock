@@ -1,31 +1,20 @@
 import { fetchDashboard } from "../api/dashboardApi.js";
+import { formatCurrency } from "../../../utils/Utility.js";
 
 console.log("loaded");
 
-// ======================
-// Helpers
-// ======================
-function formatCurrency(amount) {
-  return Number(amount || 0).toLocaleString("en-PH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
 
 function formatNumber(amount) {
   return Number(amount || 0).toLocaleString("en-PH");
 }
 
-// ======================
-// State
-// ======================
-let cachedBestSelling = { by_quantity: [], by_revenue: [] };
+// Staten
+let cachedBestSelling = { by_quantity: [], by_reveue: [] };
 let currentBestSellingMode = "quantity";
 let trendsChart = null;
 
-// ======================
+
 // Load Dashboard
-// ======================
 async function loadDashboard() {
   try {
     const result = await fetchDashboard();
@@ -49,16 +38,11 @@ async function loadDashboard() {
   }
 }
 
-// ======================
 // Stat Cards
-// ======================
 function renderChangeBadge(elementId, pct) {
   const el = document.getElementById(elementId);
   if (!el) return;
 
-  // No previous-month baseline to compare against — showing a fake "+100%"
-  // here would be misleading (especially for a value that can be negative,
-  // like Net Profit), so show a neutral indicator instead.
   if (pct === null || pct === undefined) {
     el.className = "text-xs font-semibold text-gray-400";
     el.innerHTML = "New";
@@ -96,9 +80,7 @@ function renderStats(stats) {
   }
 }
 
-// ======================
 // Performance Trends Chart
-// ======================
 function renderTrendsChart(trends) {
   const canvas = document.getElementById("trendsChart");
   if (!canvas) return;
@@ -185,9 +167,8 @@ function renderTrendsChart(trends) {
   });
 }
 
-// ======================
+
 // Low Stock Alerts
-// ======================
 function renderLowStock(items) {
   const container = document.getElementById("lowStockList");
   if (!container) return;
@@ -222,9 +203,7 @@ function renderLowStock(items) {
   });
 }
 
-// ======================
 // Best Selling (toggle: Quantity / Revenue)
-// ======================
 const qtyToggleBtn = document.getElementById("bestSellingQtyBtn");
 const revenueToggleBtn = document.getElementById("bestSellingRevenueBtn");
 
@@ -302,24 +281,7 @@ function renderBestSelling() {
   });
 }
 
-function renderLowStockBanner(lowStockItems) {
-  const banner = document.getElementById("lowStockBanner");
-  const text = document.getElementById("lowStockBannerText");
-  if (!banner || !text) return;
 
-  if (lowStockItems.length === 0) {
-    banner.classList.add("hidden");
-    return;
-  }
-
-  text.innerHTML = `${lowStockItems.length} item(s) low on stock: ${lowStockItems
-    .map((i) => i.name)
-    .slice(0, 3)
-    .join(", ")}${lowStockItems.length > 3 ? "..." : ""}`;
-  banner.classList.remove("hidden");
-  if (window.lucide) lucide.createIcons();
-}
 
 // Initialize on load
 loadDashboard();
-renderLowStockBanner();

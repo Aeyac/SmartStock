@@ -29,7 +29,6 @@ switch ($method) {
             $sale = $mydb->res ? $mydb->res->fetch_assoc() : null;
 
             if (!$sale) {
-                http_response_code(404);
                 echo json_encode(['status' => 'error', 'message' => 'Sale not found.']);
                 exit;
             }
@@ -98,7 +97,6 @@ switch ($method) {
         }
 
         if (!empty($errors)) {
-            http_response_code(422);
             echo json_encode(['status' => 'error', 'errors' => $errors]);
             exit;
         }
@@ -155,7 +153,6 @@ switch ($method) {
 
             $mydb->conn->commit();
 
-            http_response_code(201);
             echo json_encode([
                 'status' => 'success',
                 'message' => 'Sale recorded successfully.',
@@ -165,7 +162,6 @@ switch ($method) {
             $mydb->conn->rollback();
             error_log('Sale Error: ' . $e->getMessage());
 
-            http_response_code(500);
             echo json_encode(['status' => 'error', 'message' => 'Could not record sale.']);
         }
         break;
@@ -173,7 +169,5 @@ switch ($method) {
 
 
     default:
-
-        http_response_code(405);
         echo json_encode(['status' => 'error', 'message' => 'Method Not Allowed.']);
 }

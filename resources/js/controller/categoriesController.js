@@ -1,6 +1,5 @@
 import {
   fetchCategories,
-  fetchArchivedCategories,
   createCategory,
   updateCategory,
   deleteCategory,
@@ -20,7 +19,6 @@ console.log("loaded");
 
 async function saveCategory(id = null) {
   clearModalErrors();
-
   const name = document.getElementById("categoryName").value.trim();
 
   const localErrors = {};
@@ -41,7 +39,6 @@ async function saveCategory(id = null) {
         // Display validation errors returned directly from PHP
         showModalErrors(result.errors);
       } else if (result.message) {
-        // e.g. "This category already exists." has no field to attach to
         toastError(result.message);
       }
       return;
@@ -56,9 +53,7 @@ async function saveCategory(id = null) {
   }
 }
 
-// ======================
 // Archive / Restore
-// ======================
 async function archiveCategory(id) {
   const confirmed = await confirmToast({
     title: "Archive Category?",
@@ -101,10 +96,8 @@ async function restoreCategoryHandler(id) {
   }
 }
 
-// ======================
 // State
-// ======================
-let currentView = "all"; // "all" | "archived"
+let currentView = "all"; // initial value
 let allCategories = [];
 let currentSearch = "";
 
@@ -113,25 +106,15 @@ let currentSearch = "";
 // ======================
 async function loadCategories() {
   try {
-    const result =
-      currentView === "archived"
-        ? await fetchArchivedCategories()
-        : await fetchCategories();
-
-    const totalCount = document.getElementById("totalCategories");
-
-    console.log(result.categories);
+    const result = await fetchCategories();
 
     if (result.status === "success") {
       allCategories = result.categories;
-      if (totalCount) totalCount.innerHTML = allCategories.length;
-
       applyFilters();
     } else {
       toastError(result.message || "Failed to load categories.");
     }
   } catch (error) {
-    console.error(error);
     toastError("Unable to load categories.");
   }
 }
@@ -162,24 +145,33 @@ viewBtns.forEach(({ el, value }) => {
     const addBtnEl = document.getElementById("addBtn");
     if (addBtnEl) addBtnEl.classList.toggle("hidden", isArchivedView);
 
-    loadCategories();
+    applyFilters();
   });
 });
 
-// ======================
-// Search
-// ======================
+// Search & Filter Handler
 function applyFilters() {
   const term = currentSearch.trim().toLowerCase();
 
-  const filtered = allCategories.filter((categ) => {
-    const matchesSearch =
-      term === "" || categ.name?.toLowerCase().includes(term);
+  // Get total items in current view (before search input filtering)
+  const categoriesInView = allCategories.filter((categ) =>
+    currentView === "archived"
+      ? categ.deleted_at !== null
+      : categ.deleted_at === null,
+  );
 
-    return matchesSearch;
-  });
+  // Update totalCategories counter dynamically to reflect current view count
+  const totalCountEl = document.getElementById("totalCategories");
+  if (totalCountEl) {
+    totalCountEl.innerHTML = categoriesInView.length;
+  }
 
-  renderCategories(filtered, allCategories.length);
+  // Filter based on search input
+  const filtered = categoriesInView.filter(
+    (categ) => term === "" || categ.name?.toLowerCase().includes(term),
+  );
+
+  renderCategories(filtered, categoriesInView.length);
 }
 
 const searchInput = document.getElementById("searchInput");
@@ -191,9 +183,7 @@ if (searchInput) {
   });
 }
 
-// ======================
 // Render (table for desktop, cards for mobile)
-// ======================
 function renderCategories(categories, totalCategoriesTotal = 0) {
   const tbody = document.querySelector("#categoriesTableBody");
   const cardList = document.querySelector("#categoriesCardList");
@@ -233,8 +223,6 @@ function renderCategories(categories, totalCategoriesTotal = 0) {
   }
 
   categories.forEach((category) => {
-    const itemCount = 8;
-
     const dateLabel =
       currentView === "archived"
         ? `Archived: ${category.deleted_at?.slice(0, 10) ?? "—"}`
@@ -269,10 +257,6 @@ function renderCategories(categories, totalCategoriesTotal = 0) {
     </td>
 
     <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
-        ${itemCount}
-    </td>
-
-    <td class="py-3.5 px-4 sm:px-6 text-left text-gray-600 font-medium">
         ${dateLabel}
     </td>
 
@@ -298,11 +282,6 @@ function renderCategories(categories, totalCategoriesTotal = 0) {
         <span class="shrink-0 text-[11px] text-gray-400 font-medium">
             ${dateLabel}
         </span>
-      </div>
-
-      <div class="text-xs sm:text-sm text-gray-600 flex items-center gap-1.5">
-        <i data-lucide="box" class="w-3.5 h-3.5 text-gray-400"></i>
-        <span class="font-medium">${itemCount} items</span>
       </div>
 
       <div class="flex items-center justify-end gap-1 pt-1 border-t border-gray-100">
@@ -342,9 +321,7 @@ function renderCategories(categories, totalCategoriesTotal = 0) {
   }
 }
 
-// ======================
 // Add Category Modal
-// ======================
 const addBtn = document.getElementById("addBtn");
 if (addBtn) {
   addBtn.addEventListener("click", () => {

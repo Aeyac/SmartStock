@@ -29,19 +29,9 @@ $mydb = new myDB();
 $method = $_SERVER['REQUEST_METHOD'];
 
 
-// ==================================================
-// Request Handler
-// ==================================================
-
 switch ($method) {
 
-    // ==================================================
     // GET - List Suppliers (active + archived together)
-    // Filtering by archive status is handled client-side, the same
-    // pattern already used for the stock ledger — one fetch, filtered
-    // in JS, instead of separate active/archived endpoints.
-    // ==================================================
-
     case 'GET':
 
         $mydb->select('suppliers', '*', [
@@ -60,10 +50,7 @@ switch ($method) {
         break;
 
 
-    // ==================================================
     // POST - Create Supplier
-    // ==================================================
-
     case 'POST':
 
         $input = json_decode(
@@ -71,13 +58,6 @@ switch ($method) {
             true
         ) ?? [];
 
-        // NOTE: duplicate checking (e.g. email uniqueness) happens inside
-        // validateSupplierInput() in Utility.php. That check needs to be
-        // widened to also match archived suppliers (deleted_at IS NOT
-        // NULL), the same way Categories.php checks both active AND
-        // archived categories — otherwise re-creating a supplier whose
-        // name/email was already archived will crash at the database's
-        // unique constraint instead of returning a clean validation error.
         $validation = validateSupplierInput(
             $mydb,
             $userId,
@@ -100,7 +80,6 @@ switch ($method) {
             'name' => $validData['name'],
             'contact_number' => $validData['contact_number'],
             'email' => $validData['email'],
-            'active' => $validData['status']
         ]);
 
         if (!$id) {
@@ -121,9 +100,7 @@ switch ($method) {
         break;
 
 
-    // ==================================================
     // PUT - Update Supplier (active suppliers only)
-    // ==================================================
 
     case 'PUT':
 
@@ -186,7 +163,6 @@ switch ($method) {
                 'name' => $validData['name'],
                 'contact_number' => $validData['contact_number'],
                 'email' => $validData['email'],
-                'active' => $validData['status']
             ],
             [
                 'id' => $id,
@@ -202,15 +178,7 @@ switch ($method) {
         break;
 
 
-    // ==================================================
     // DELETE - Archive Supplier (soft delete)
-    // ==================================================
-    // No more "is this supplier used by any items" check here — that
-    // check only mattered for a PERMANENT delete, which could break the
-    // foreign key on items.supplier_id. Archiving never removes the row,
-    // so there's nothing for that foreign key to lose.
-    // ==================================================
-
     case 'DELETE':
 
         $id = (int) ($_GET['id'] ?? 0);
@@ -245,9 +213,7 @@ switch ($method) {
         break;
 
 
-    // ==================================================
     // PATCH - Restore an archived Supplier (clears deleted_at)
-    // ==================================================
 
     case 'PATCH':
 
@@ -271,10 +237,6 @@ switch ($method) {
             exit;
         }
 
-        // Restoring shouldn't silently create a duplicate — if a new
-        // active supplier has since taken this email, block the restore.
-        // NOTE: adjust the matched column(s) here to mirror whatever
-        // validateSupplierInput() actually treats as the unique field.
         $mydb->select('suppliers', 'id', [
             'email' => $supplier['email'],
             'user_id' => $userId,

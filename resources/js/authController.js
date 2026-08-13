@@ -1,5 +1,5 @@
 import { apiRequest } from "../fetchApi.js";
-import { toastSuccess } from "./controller/toastController.js";
+import { toastSuccess, toastError } from "./controller/toastController.js";
 console.log("loaded");
 const BASE_URL = "/smart_stock/endpoints/Auth.php";
 
@@ -29,7 +29,7 @@ export function logoutUser() {
 const registerForm =
   document.getElementById("registerForm") || document.querySelector("form");
 
-if (registerForm && document.getElementById("name")) {
+if (registerForm) {
   registerForm.addEventListener("submit", async function (e) {
     e.preventDefault();
 
@@ -47,7 +47,7 @@ if (registerForm && document.getElementById("name")) {
 
     try {
       const result = await registerUser(name, email, password);
-      console.log(result);
+      // console.log(result);
       setTimeout(() => {
         if (btn) {
           btn.innerHTML = originalText;
@@ -55,19 +55,22 @@ if (registerForm && document.getElementById("name")) {
         }
       }, 1000);
       toastSuccess(result.message);
-
       registerForm.reset();
+      
     } catch (err) {
       if (btn) {
         btn.innerHTML = originalText;
         btn.disabled = false;
       }
-      alert(err.message || "Registration failed. Please try again.");
+      toastError(
+        err.message || "Registration failed. Please try again.",
+        "Register",
+      );
     }
   });
 }
 
-// --- LOGIN FORM HANDLING ---
+// login
 const loginForm =
   document.getElementById("loginForm") || document.querySelector("form");
 
@@ -90,28 +93,31 @@ if (loginForm && !document.getElementById("name")) {
       const result = await loginUser(email, password);
 
       if (result.status === "error") {
-        alert(result.message || "Login failed. Check your credentials.");
+        toastError(
+          result.message || "Login failed. Check your credentials.",
+          "Login",
+        );
         if (btn) {
           btn.innerHTML = originalText;
           btn.disabled = false;
         }
         return;
       }
-
-      console.log("Login successful:", result);
-
       window.location.replace("./resources/views/dashboard.php");
     } catch (err) {
       if (btn) {
         btn.innerHTML = originalText;
         btn.disabled = false;
       }
-      alert(err.message || "Login failed. Check your credentials.");
+      toastError(
+        err.message || "Login failed. Check your credentials.",
+        "Login",
+      );
     }
   });
 }
 
-// --- LOGOUT HANDLING ---
+// logout
 const logoutBtn = document.getElementById("logoutBtn");
 if (logoutBtn) {
   logoutBtn.addEventListener("click", async () => {
@@ -119,12 +125,13 @@ if (logoutBtn) {
       await logoutUser();
       window.location.href = "../../index.php";
     } catch (err) {
-      alert(err.message || "Logout failed.");
+      toastError("Logout failed.", "Logout");
+      // alert(err.message || "Logout failed.");
     }
   });
 }
 
-// --- PASSWORD VISIBILITY TOGGLE (Guarded against Null crashes) ---
+// password visibility toggle
 const passwordBtn = document.getElementById("passwordBtn");
 if (passwordBtn) {
   passwordBtn.addEventListener("click", () => {
@@ -134,10 +141,14 @@ if (passwordBtn) {
     if (input && icon) {
       if (input.type === "password") {
         input.type = "text";
-        icon.textContent = "visibility_off";
+        icon.setAttribute("data-lucide", "eye-off");
       } else {
         input.type = "password";
-        icon.textContent = "visibility";
+        icon.setAttribute("data-lucide", "eye");
+      }
+
+      if (window.lucide) {
+        lucide.createIcons();
       }
     }
   });

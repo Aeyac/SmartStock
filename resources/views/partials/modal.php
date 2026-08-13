@@ -2,7 +2,7 @@
 <div id="modal"
     class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/40 backdrop-blur-sm transition-opacity duration-200 ease-out opacity-0">
 
-    <!-- Modal Card (Targeted automatically as first child by JS) -->
+    <!-- Modal Card -->
     <div id="modalCard"
         class="relative w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 shadow-2xl transition-all duration-200 ease-out border border-slate-100 opacity-0 scale-95">
 
